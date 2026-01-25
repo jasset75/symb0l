@@ -88,6 +88,24 @@ mise exec -- pnpm test:coverage
 - Complete data hierarchy relationships
 - Application startup verification
 
+## Pre-commit Hooks
+
+This project uses [lefthook](https://github.com/evilmartians/lefthook) for automated pre-commit checks.
+
+### Automatic Setup
+
+Hooks are automatically installed when you run `pnpm install` (via the `prepare` script).
+
+### What Runs on Commit
+
+Before each commit, the following checks run in parallel:
+- **Type checking:** `tsc --noEmit` - Catches TypeScript errors
+- **Tests:** `pnpm test` - Ensures all tests pass
+
+### Local Overrides
+
+Create a `lefthook-local.yml` file (gitignored) for local hook customizations.
+
 ## License
 
 Dual-licensed under MIT or Apache 2.0.

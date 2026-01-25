@@ -1,0 +1,13 @@
+# Lefthook configuration for pre-commit hooks
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    type-check:
+      glob: "*.{ts,tsx}"
+      run: pnpm exec tsc --noEmit
+      
+    tests:
+      glob: "*.{ts,tsx}"
+      run: pnpm test
