@@ -1,8 +1,8 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 
 const dbPath = path.resolve('symb0l.db');
-const db = new Database(dbPath, { verbose: console.log });
+const db = new DatabaseSync(dbPath);
 
 export function initDb() {
     const schema = `

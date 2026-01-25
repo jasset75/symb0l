@@ -13,11 +13,8 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.25.0",
-  "dependencies": {
-    "better-sqlite3": "^12.6.2"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.0.10",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
