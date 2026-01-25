@@ -53,4 +53,41 @@ pnpm start
 
 - `src/index.ts`: Entry point of the application.
 - `src/db.ts`: Database connection and schema initialization.
+- `src/db.test.ts`: Database unit tests.
+- `src/index.test.ts`: Application entry point tests.
 - `symb0l.db`: SQLite database file (created on first run).
+
+## Testing
+
+This project uses Node.js 24's native test runner (`node:test`) for zero-dependency testing.
+
+### Run all tests
+
+```bash
+mise exec -- pnpm test
+```
+
+### Run tests in watch mode
+
+Automatically re-run tests when files change:
+
+```bash
+mise exec -- pnpm test:watch
+```
+
+### Generate test coverage
+
+```bash
+mise exec -- pnpm test:coverage
+```
+
+**Test Coverage:**
+- Database initialization and schema creation
+- UNIQUE, FOREIGN KEY, and NOT NULL constraints
+- Idempotent initialization
+- Complete data hierarchy relationships
+- Application startup verification
+
+## License
+
+Dual-licensed under MIT or Apache 2.0.

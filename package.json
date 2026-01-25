@@ -7,7 +7,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
+    "test:watch": "node --import tsx --test --watch 'src/**/*.test.ts'",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage 'src/**/*.test.ts'"
   },
   "keywords": [],
   "author": "",
