@@ -4,7 +4,7 @@ Symb0l is a lightweight financial instrument and symbol database management syst
 
 ## Features
 
-- **SQLite Database**: Uses `better-sqlite3` for fast and reliable local data storage.
+- **SQLite Database**: Uses `node:sqlite` (Node.js built-in module) for fast and reliable local data storage. Although `node:sqlite` is still somewhat immature, this design decision was made to eliminate third-party dependencies and bet on native Node.js support.
 - **Normalized Schema**:
   - `exchange`: Stores exchange details.
   - `market`: Represents markets within exchanges.
