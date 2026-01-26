@@ -4,6 +4,10 @@
 pre-commit:
   parallel: true
   commands:
+    compile-diagrams:
+      run: export PATH=$HOME/.local/share/mise/shims:$PATH && pnpm run compile-diagrams
+      stage_fixed: true
+
     type-check:
       glob: "*.{ts,tsx}"
       run: pnpm exec tsc --noEmit

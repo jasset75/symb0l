@@ -1,0 +1,49 @@
+@startuml DataModel
+skinparam linetype ortho
+
+entity "Exchange" as exchange {
+  *exchange_id : INTEGER <<PK>>
+  --
+  *code : TEXT
+  name : TEXT
+}
+
+entity "Market" as market {
+  *market_id : INTEGER <<PK>>
+  --
+  *exchange_id : INTEGER <<FK>>
+  *code : TEXT
+}
+
+entity "Instrument" as instrument {
+  *instrument_id : INTEGER <<PK>>
+  --
+  *isin : TEXT
+  *name : TEXT
+  *instrument_type : TEXT
+}
+
+entity "Listing" as listing {
+  *listing_id : INTEGER <<PK>>
+  --
+  *instrument_id : INTEGER <<FK>>
+  *market_id : INTEGER <<FK>>
+  *symbol_code : TEXT
+  display_ticker : TEXT
+  currency_id : TEXT <<FK>>
+}
+
+entity "Currency" as currency {
+  *currency_id : TEXT <<PK>>
+  --
+  *name : TEXT
+  *code3 : TEXT
+  *code2 : TEXT
+  *currency_symbol : TEXT
+}
+
+exchange ||..|{ market
+market ||..|{ listing
+instrument ||..|{ listing
+currency ||..|{ listing
+@enduml

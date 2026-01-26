@@ -52,6 +52,7 @@ describe('Database Initialization', () => {
                 currency_id TEXT,
                 FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id),
                 FOREIGN KEY (market_id) REFERENCES market(market_id),
+                FOREIGN KEY (currency_id) REFERENCES currency(currency_id),
                 UNIQUE(market_id, symbol_code)
             );
 
@@ -244,6 +245,7 @@ describe('Database Schema Relationships', () => {
                 currency_id TEXT,
                 FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id),
                 FOREIGN KEY (market_id) REFERENCES market(market_id),
+                FOREIGN KEY (currency_id) REFERENCES currency(currency_id),
                 UNIQUE(market_id, symbol_code)
             );
 

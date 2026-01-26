@@ -13,6 +13,10 @@
   - `currency`: Reference table for currencies.
 - **TypeScript**: Written in TypeScript for type safety and modern tooling.
 
+## Data Model
+
+![Data Model](doc/images/data_model.svg)
+
 ## Prerequisites
 
 - Node.js (managed via mise)
