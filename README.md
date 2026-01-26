@@ -61,6 +61,11 @@ pnpm start
 - `src/index.test.ts`: Application entry point tests.
 - `symb0l.db`: SQLite database file (created on first run).
 
+## Documentation
+
+- [Database Management](doc/DATABASE.md) - Schema, seeds, and development workflow
+- [Testing Guide](doc/TESTING.md) - Unit and integration testing
+
 ## Testing
 
 This project uses Node.js 24's native test runner (`node:test`) for zero-dependency testing.
