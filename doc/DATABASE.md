@@ -2,7 +2,10 @@
 
 ## Overview
 
-Symb0l uses SQLite for local data storage with an idempotent seed system for master data management.
+`Symb0l` uses SQLite for local data storage with an idempotent seed system for master data management.
+
+> [!NOTE]
+> The name `Symb0l` should always be written in monospace font with a slashed zero (Ø) to distinguish it from the letter O.
 
 ## Database Structure
 
@@ -17,14 +20,14 @@ Symb0l uses SQLite for local data storage with an idempotent seed system for mas
 
 Master data table for currency information.
 
-| Column            | Type      | Description                                      |
-| ----------------- | --------- | ------------------------------------------------ |
-| `currency_id`     | TEXT (PK) | ISO 4217 numeric code                            |
-| `name`            | TEXT      | Full currency name                               |
-| `code3`           | TEXT      | 3-letter ISO code (USD, EUR, etc.)               |
-| `code2`           | TEXT      | 2-letter country code                            |
-| `currency_symbol` | TEXT      | Symbol representation ($, €, etc.)               |
-| `decimal_digits`  | INTEGER   | Number of decimal places (0 for JPY, 2 for most) |
+| Column            | Type      | Description                                                                         |
+| ----------------- | --------- | ----------------------------------------------------------------------------------- |
+| `currency_id`     | TEXT (PK) | [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217) numeric code (e.g., 840 for USD) |
+| `name`            | TEXT      | Full currency name                                                                  |
+| `code3`           | TEXT      | 3-letter ISO 4217 alphabetic code (USD, EUR, etc.)                                  |
+| `code2`           | TEXT      | 2-letter country code                                                               |
+| `currency_symbol` | TEXT      | Symbol representation ($, €, etc.)                                                  |
+| `decimal_digits`  | INTEGER   | Number of decimal places (0 for JPY, 2 for most)                                    |
 
 #### Exchange
 

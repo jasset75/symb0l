@@ -1,5 +1,7 @@
 # `Symb0l`
 
+> **Note**: The name `Symb0l` should always be written in monospace font with a slashed zero (Ø) to distinguish it from the letter O.
+
 `Symb0l` is a lightweight financial instrument and symbol database management system built with Node.js and SQLite. It provides a structured schema for normalizing and storing data related to exchanges, markets, instruments, listings, and currencies.
 
 ## Features
