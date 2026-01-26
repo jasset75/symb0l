@@ -53,11 +53,13 @@ We use **PlantUML** for documenting the database schema and architecture.
 
 1. **Environment Variables**:
    Create a `.env` file in the project root with the following variables:
+
    ```bash
    JAVA_BIN=/path/to/java
    PLANTUML_HOME=/path/to/plantuml.jar
    ```
-   *Note: Ensure `plantuml.jar` exists at the specified path.*
+
+   _Note: Ensure `plantuml.jar` exists at the specified path._
 
 2. **Source Files**:
    - Place `.puml` files in `doc/diagrams/`.
@@ -76,6 +78,7 @@ We use **PlantUML** for documenting the database schema and architecture.
 ### Working with Diagrams
 
 When modifying the database schema (`src/db.ts`), you **MUST**:
+
 1. Update the corresponding `.puml` file in `doc/diagrams/` (e.g., `data_model.puml`).
 2. Run `pnpm run compile-diagrams` to generate the updated SVG.
 3. Verify the SVG is correctly embedded in `README.md` or other documentation.

@@ -11,7 +11,13 @@
     "test": "node --import tsx --test 'src/**/*.test.ts'",
     "test:watch": "node --import tsx --test --watch 'src/**/*.test.ts'",
     "test:coverage": "node --import tsx --test --experimental-test-coverage 'src/**/*.test.ts'",
-    "compile-diagrams": "tsx src/tools/compile-diagrams.ts"
+    "compile-diagrams": "tsx src/tools/compile-diagrams.ts",
+    "lint": "eslint \"src/**/*.ts\" --ext .ts",
+    "lint:fix": "eslint \"src/**/*.ts\" --ext .ts --fix",
+    "format": "prettier \"**/*.{js,mjs,ts,json,md,yml,yaml}\" --check",
+    "format:fix": "prettier \"**/*.{js,mjs,ts,json,md,yml,yaml}\" --write",
+    "check:all": "pnpm run lint && pnpm run format",
+    "fix:all": "pnpm run lint:fix && pnpm run format:fix"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +25,14 @@
   "packageManager": "pnpm@10.25.0",
   "devDependencies": {
     "@types/node": "^25.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
     "lefthook": "^2.0.15",
+    "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

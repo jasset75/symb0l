@@ -86,6 +86,7 @@ mise exec -- pnpm test:coverage
 ```
 
 **Test Coverage:**
+
 - Database initialization and schema creation
 - UNIQUE, FOREIGN KEY, and NOT NULL constraints
 - Idempotent initialization
@@ -103,6 +104,7 @@ Hooks are automatically installed when you run `pnpm install` (via the `prepare`
 ### What Runs on Commit
 
 Before each commit, the following checks run in parallel:
+
 - **Type checking:** `tsc --noEmit` - Catches TypeScript errors
 - **Tests:** `pnpm test` - Ensures all tests pass
 

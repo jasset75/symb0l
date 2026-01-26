@@ -1,11 +1,11 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'path';
+import { DatabaseSync } from "node:sqlite";
+import path from "path";
 
-const dbPath = path.resolve('symb0l.db');
+const dbPath = path.resolve("symb0l.db");
 const db = new DatabaseSync(dbPath);
 
 export function initDb() {
-    const schema = `
+  const schema = `
         -- Exchange
         CREATE TABLE IF NOT EXISTS exchange (
             exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,8 +53,8 @@ export function initDb() {
             currency_symbol TEXT NOT NULL
         );
     `;
-    db.exec(schema);
-    console.log('Database initialized at', dbPath);
+  db.exec(schema);
+  console.log("Database initialized at", dbPath);
 }
 
 export { db };
