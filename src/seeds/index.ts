@@ -1,8 +1,12 @@
+import { db } from "../db.js";
 import { currencies } from "./currencies.js";
 import { exchanges } from "./exchanges.js";
+import { markets } from "./markets.js";
 import { seed, type SeederConfig } from "./seeder.js";
+import { resolveForeignKey } from "./resolvers.js";
 import type { CurrencyData } from "./currencies.js";
 import type { ExchangeData } from "./exchanges.js";
+import type { MarketData } from "./markets.js";
 
 /**
  * Seeds the database with master data.
@@ -11,7 +15,7 @@ import type { ExchangeData } from "./exchanges.js";
 export function seedDatabase(): void {
   console.log("Starting database seeding...");
 
-  // Seed exchanges
+  // Seed exchanges (no dependencies)
   const exchangeConfig: SeederConfig<ExchangeData> = {
     entityName: "exchanges",
     sql: "INSERT OR REPLACE INTO exchange (code, name) VALUES (?, ?)",
@@ -20,7 +24,25 @@ export function seedDatabase(): void {
   };
   seed(exchangeConfig);
 
-  // Seed currencies
+  // Seed markets (depends on exchanges)
+  const marketConfig: SeederConfig<MarketData> = {
+    entityName: "markets",
+    sql: "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)",
+    data: markets,
+    transform: (market) => ({
+      exchange_id: resolveForeignKey("exchange", "exchange_id", "code", market.exchange_code),
+      code: market.code,
+      name: market.name,
+    }),
+    mapToValues: (transformed) => [
+      (transformed as unknown as { exchange_id: number }).exchange_id,
+      (transformed as unknown as { code: string }).code,
+      (transformed as unknown as { name: string }).name,
+    ],
+  };
+  seed(marketConfig);
+
+  // Seed currencies (no dependencies)
   const currencyConfig: SeederConfig<CurrencyData> = {
     entityName: "currencies",
     sql: `INSERT OR REPLACE INTO currency (currency_id, name, code3, code2, currency_symbol, decimal_digits)

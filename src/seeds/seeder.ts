@@ -26,6 +26,14 @@ export interface SeederConfig<T> {
    * @returns Array of values in the order expected by the SQL statement
    */
   mapToValues: (item: T) => SqliteValue[];
+
+  /**
+   * Optional transform function to modify items before mapping to values
+   * Useful for resolving foreign keys or other pre-processing
+   * @param item - The original data object
+   * @returns Transformed object or the original if no transformation needed
+   */
+  transform?: (item: T) => T | Record<string, SqliteValue>;
 }
 
 /**
@@ -42,7 +50,8 @@ export function seed<T>(config: SeederConfig<T>): number {
   let count = 0;
 
   for (const item of config.data) {
-    const values = config.mapToValues(item);
+    const transformedItem = config.transform ? config.transform(item) : item;
+    const values = config.mapToValues(transformedItem as T);
     stmt.run(...values);
     count++;
   }

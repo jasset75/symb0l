@@ -82,3 +82,83 @@ When modifying the database schema (`src/db.ts`), you **MUST**:
 1. Update the corresponding `.puml` file in `doc/diagrams/` (e.g., `data_model.puml`).
 2. Run `pnpm run compile-diagrams` to generate the updated SVG.
 3. Verify the SVG is correctly embedded in `README.md` or other documentation.
+
+---
+
+## 🌱 Database Seeding System
+
+We use a **generic seeder pattern** to populate master data tables. This approach ensures consistency, type safety, and maintainability.
+
+### Architecture
+
+The seeding system consists of:
+
+1. **Generic Seeder** (`src/seeds/seeder.ts`): Reusable seeding logic
+2. **Seed Data Files** (`src/seeds/*.ts`): Master data definitions
+3. **Seed Orchestrator** (`src/seeds/index.ts`): Coordinates seeding order
+4. **Integration Tests** (`src/seeds/*.integration.test.ts`): Validates seed data
+
+### Generic Seeder Pattern
+
+The `seed()` function accepts a configuration object:
+
+```typescript
+interface SeederConfig<T> {
+  entityName: string; // For logging
+  sql: string; // INSERT OR REPLACE statement
+  data: T[]; // Array of seed data
+  mapToValues: (item: T) => SqliteValue[]; // Maps object to SQL values
+  transform?: (item: T) => T | Record<string, SqliteValue>; // Optional pre-processing
+}
+```
+
+### Adding a New Seed
+
+Follow these steps to add a new seed entity:
+
+#### 1. Create the Seed Data File
+
+Create `src/seeds/[entity].ts` with your master data. See [`src/seeds/exchanges.ts`](file:///Users/juan/work/symb0l/src/seeds/exchanges.ts) or [`src/seeds/markets.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.ts) as templates.
+
+#### 2. Add to Seed Orchestrator
+
+Edit `src/seeds/index.ts`:
+
+**Simple case (no foreign keys)**: See `exchanges` or `currencies` in [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
+
+**Complex case (with foreign keys)**: See `markets` in [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
+
+- Use `resolveForeignKey()` from [`src/seeds/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/resolvers.ts)
+- Signature: `resolveForeignKey(table, idColumn, whereColumn, whereValue)`
+
+#### 3. Create Integration Tests
+
+Create `src/seeds/[entity].integration.test.ts`. Use these as templates:
+
+- [`src/seeds/exchanges.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/exchanges.integration.test.ts) - Simple entity
+- [`src/seeds/markets.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.integration.test.ts) - Entity with foreign keys
+
+#### 4. Verify
+
+```bash
+pnpm test:integration  # All tests should pass
+pnpm seed              # Verify seeding works
+```
+
+### Best Practices
+
+1. **Order Matters**: Seed entities in dependency order (parents before children)
+2. **Idempotency**: Use `INSERT OR REPLACE` to make seeds idempotent
+3. **Foreign Keys**: Enable with `PRAGMA foreign_keys = ON;`
+4. **Type Safety**: Always define TypeScript interfaces for seed data
+5. **Testing**: Write integration tests for every seed entity
+6. **Documentation**: Add JSDoc comments explaining the entity's purpose
+
+### Reference Implementation
+
+See the complete implementation of the markets seed (with foreign keys):
+
+- Data: [`src/seeds/markets.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.ts)
+- Seeding: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts) (markets section)
+- Tests: [`src/seeds/markets.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.integration.test.ts)
+- Resolvers: [`src/seeds/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/resolvers.ts)

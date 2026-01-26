@@ -1,8 +1,12 @@
 /**
  * Exchange Master Data
  *
- * This seed data provides the foundational exchange reference data
- * based on the exchanges used in symbol_source.txt
+ * Exchanges are organizations that operate one or more trading markets.
+ * This represents the top level of the financial market hierarchy.
+ *
+ * Examples:
+ * - Euronext operates markets in Paris (EPA), Amsterdam (AMS), Milan (BIT), etc.
+ * - NYSE Group operates NYSE Main, NYSE Arca, NYSE American, etc.
  */
 
 export interface ExchangeData {
@@ -11,46 +15,45 @@ export interface ExchangeData {
 }
 
 export const exchanges: ExchangeData[] = [
+  // Pan-European Exchange
+  {
+    code: "EURONEXT",
+    name: "Euronext N.V.",
+  },
+
+  // US Exchanges
+  {
+    code: "NYSE_GROUP",
+    name: "NYSE Group (ICE)",
+  },
   {
     code: "NASDAQ",
-    name: "NASDAQ Stock Market",
+    name: "NASDAQ Inc.",
   },
-  {
-    code: "NYSE",
-    name: "New York Stock Exchange",
-  },
+
+  // European National Exchanges
   {
     code: "BME",
-    name: "Bolsa de Madrid",
+    name: "Bolsas y Mercados Españoles",
   },
   {
-    code: "EPA",
-    name: "Euronext Paris",
+    code: "DEUTSCHE_BOERSE",
+    name: "Deutsche Börse AG",
   },
   {
-    code: "FRA",
-    name: "Frankfurt Stock Exchange",
+    code: "LSEG",
+    name: "London Stock Exchange Group",
   },
   {
-    code: "AMS",
-    name: "Euronext Amsterdam",
+    code: "WIENER_BOERSE",
+    name: "Wiener Börse AG",
   },
   {
-    code: "BIT",
-    name: "Borsa Italiana",
+    code: "SIX_GROUP",
+    name: "SIX Group",
   },
-  {
-    code: "LON",
-    name: "London Stock Exchange",
-  },
-  {
-    code: "VIE",
-    name: "Vienna Stock Exchange",
-  },
-  {
-    code: "SWX",
-    name: "SIX Swiss Exchange",
-  },
+
+  // Foreign Exchange
   {
     code: "FOREX",
     name: "Foreign Exchange Market",

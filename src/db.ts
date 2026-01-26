@@ -5,6 +5,9 @@ const dbPath = path.resolve("symb0l.db");
 const db = new DatabaseSync(dbPath);
 
 export function initDb() {
+  // Enable foreign key constraints
+  db.exec("PRAGMA foreign_keys = ON;");
+
   const schema = `
         -- Exchange
         CREATE TABLE IF NOT EXISTS exchange (
@@ -18,6 +21,7 @@ export function initDb() {
             market_id INTEGER PRIMARY KEY AUTOINCREMENT,
             exchange_id INTEGER NOT NULL,
             code TEXT NOT NULL,
+            name TEXT,
             FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id),
             UNIQUE(exchange_id, code)
         );
