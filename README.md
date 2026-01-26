@@ -1,6 +1,6 @@
-# Symb0l
+# `Symb0l`
 
-Symb0l is a lightweight financial instrument and symbol database management system built with Node.js and SQLite. It provides a structured schema for normalizing and storing data related to exchanges, markets, instruments, listings, and currencies.
+`Symb0l` is a lightweight financial instrument and symbol database management system built with Node.js and SQLite. It provides a structured schema for normalizing and storing data related to exchanges, markets, instruments, listings, and currencies.
 
 ## Features
 
