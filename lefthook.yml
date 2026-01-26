@@ -25,3 +25,8 @@ pre-commit:
     # tests:
     #   glob: "*.{ts,tsx}"
     #   run: pnpm test
+
+pre-push:
+  commands:
+    integration-tests:
+      run: pnpm test:integration

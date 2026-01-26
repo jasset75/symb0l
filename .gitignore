@@ -9,6 +9,7 @@ build
 # Database
 *.db
 *.db-journal
+test-*.db
 
 # Environment variables
 .env
