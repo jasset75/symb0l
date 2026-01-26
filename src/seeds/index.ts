@@ -1,5 +1,8 @@
-import { db } from "../db.js";
 import { currencies } from "./currencies.js";
+import { exchanges } from "./exchanges.js";
+import { seed, type SeederConfig } from "./seeder.js";
+import type { CurrencyData } from "./currencies.js";
+import type { ExchangeData } from "./exchanges.js";
 
 /**
  * Seeds the database with master data.
@@ -8,26 +11,31 @@ import { currencies } from "./currencies.js";
 export function seedDatabase(): void {
   console.log("Starting database seeding...");
 
-  // Seed currencies
-  console.log("Seeding currencies...");
-  const currencyStmt = db.prepare(`
-        INSERT OR REPLACE INTO currency (currency_id, name, code3, code2, currency_symbol, decimal_digits)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `);
+  // Seed exchanges
+  const exchangeConfig: SeederConfig<ExchangeData> = {
+    entityName: "exchanges",
+    sql: "INSERT OR REPLACE INTO exchange (code, name) VALUES (?, ?)",
+    data: exchanges,
+    mapToValues: (exchange) => [exchange.code, exchange.name],
+  };
+  seed(exchangeConfig);
 
-  let currencyCount = 0;
-  for (const currency of currencies) {
-    currencyStmt.run(
+  // Seed currencies
+  const currencyConfig: SeederConfig<CurrencyData> = {
+    entityName: "currencies",
+    sql: `INSERT OR REPLACE INTO currency (currency_id, name, code3, code2, currency_symbol, decimal_digits)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    data: currencies,
+    mapToValues: (currency) => [
       currency.currency_id,
       currency.name,
       currency.code3,
       currency.code2,
       currency.currency_symbol,
-      currency.decimal_digits
-    );
-    currencyCount++;
-  }
+      currency.decimal_digits,
+    ],
+  };
+  seed(currencyConfig);
 
-  console.log(`✓ Seeded ${currencyCount} currencies`);
   console.log("Database seeding completed successfully!");
 }
