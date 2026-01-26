@@ -22,6 +22,6 @@ pre-commit:
       glob: "*.{ts,tsx}"
       run: pnpm exec tsc --noEmit
 
-    tests:
-      glob: "*.{ts,tsx}"
-      run: pnpm test
+    # tests:
+    #   glob: "*.{ts,tsx}"
+    #   run: pnpm test

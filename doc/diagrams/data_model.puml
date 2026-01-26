@@ -40,6 +40,7 @@ entity "Currency" as currency {
   *code3 : TEXT
   *code2 : TEXT
   *currency_symbol : TEXT
+  *decimal_digits : INTEGER
 }
 
 exchange ||..|{ market

@@ -105,6 +105,26 @@ function compileDiagrams() {
         execSync(`"${javaBin}" -jar "${plantUmlJar}" -tsvg "${pumlPath}" -o "${outputDir}"`, {
           stdio: "inherit",
         });
+
+        // PlantUML uses the @startuml name, not the filename
+        // We need to rename the generated file to match the input filename
+        const expectedFilename = path.basename(svgPath);
+        const actualFiles = fs.readdirSync(outputDir).filter((f) => f.endsWith(".svg"));
+
+        // Find the most recently created/modified SVG file
+        const latestSvg = actualFiles
+          .map((f) => ({
+            name: f,
+            path: path.join(outputDir, f),
+            stat: fs.statSync(path.join(outputDir, f)),
+          }))
+          .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)[0];
+
+        if (latestSvg && latestSvg.name !== expectedFilename) {
+          // Rename to match input filename
+          fs.renameSync(latestSvg.path, svgPath);
+        }
+
         updatedCount++;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (_error) {

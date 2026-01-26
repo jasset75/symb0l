@@ -26,3 +26,6 @@ pnpm-debug.log*
 # Tooling
 .mise.toml
 lefthook-local.yml
+
+# Data Sources
+symbol_source.txt

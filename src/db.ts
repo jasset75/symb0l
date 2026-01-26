@@ -50,7 +50,8 @@ export function initDb() {
             name TEXT NOT NULL,
             code3 TEXT NOT NULL,
             code2 TEXT NOT NULL,
-            currency_symbol TEXT NOT NULL
+            currency_symbol TEXT NOT NULL,
+            decimal_digits INTEGER NOT NULL DEFAULT 2
         );
     `;
   db.exec(schema);
