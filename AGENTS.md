@@ -98,19 +98,17 @@ The seeding system consists of:
 3. **Seed Orchestrator** (`src/seeds/index.ts`): Coordinates seeding order
 4. **Integration Tests** (`src/seeds/*.integration.test.ts`): Validates seed data
 
-### Generic Seeder Pattern
+### SeederBuilder Pattern
 
-The `seed()` function accepts a configuration object:
+The seeding system uses the **Builder Pattern** via the `SeederBuilder` class, providing a fluent API for database seeding with automatic foreign key resolution.
 
-```typescript
-interface SeederConfig<T> {
-  entityName: string; // For logging
-  sql: string; // INSERT OR REPLACE statement
-  data: T[]; // Array of seed data
-  mapToValues: (item: T) => SqliteValue[]; // Maps object to SQL values
-  transform?: (item: T) => T | Record<string, SqliteValue>; // Optional pre-processing
-}
-```
+**Key Benefits:**
+
+- Single import - no need to import separate `seed` and `resolveForeignKey` functions
+- Fluent, expressive API
+- Clear class-level responsibilities
+- Type-safe with generics
+- Encapsulated foreign key resolution
 
 ### Adding a New Seed
 
@@ -122,15 +120,59 @@ Create `src/seeds/[entity].ts` with your master data. See [`src/seeds/exchanges.
 
 #### 2. Add to Seed Orchestrator
 
-Edit `src/seeds/index.ts`:
+Edit [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts):
 
-**Simple case (no foreign keys)**: See `exchanges` or `currencies` in [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
+**Simple case (no foreign keys)**:
 
-**Complex case (with foreign keys)**: See `markets` in [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
+```typescript
+import { SeederBuilder } from "./lib/SeederBuilder.js";
 
-- Use `resolveForeignKey(db, ...)` from [`src/seeds/lib/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/resolvers.ts)
-- Signature: `resolveForeignKey(db, table, idColumn, whereColumn, whereValue)`
-- The `db` instance is passed via dependency injection to avoid tight coupling
+new SeederBuilder<(typeof exchanges)[number]>(db)
+  .entity("exchanges")
+  .sql("INSERT OR REPLACE INTO exchange (code, name) VALUES (?, ?)")
+  .data(exchanges)
+  .mapToValues((exchange) => [exchange.code, exchange.name])
+  .seed();
+```
+
+**Complex case (with foreign keys)**:
+
+```typescript
+new SeederBuilder<(typeof markets)[number]>(db)
+  .entity("markets")
+  .sql("INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)")
+  .data(markets)
+  .resolveForeignKey(
+    "exchange_id",
+    "exchange",
+    "exchange_id",
+    "code",
+    (market) => market.exchange_code
+  )
+  .mapToValues((market) => [
+    (market as unknown as Record<string, number>).exchange_id,
+    market.code,
+    market.name,
+  ])
+  .seed();
+```
+
+**Multiple foreign keys**:
+
+```typescript
+new SeederBuilder<(typeof items)[number]>(db)
+  .entity("items")
+  .sql("INSERT OR REPLACE INTO item (code, category_id, region_id) VALUES (?, ?, ?)")
+  .data(items)
+  .resolveForeignKey("category_id", "category", "id", "code", (item) => item.categoryCode)
+  .resolveForeignKey("region_id", "region", "id", "code", (item) => item.regionCode)
+  .mapToValues((item) => [
+    item.code,
+    (item as unknown as Record<string, number>).category_id,
+    (item as unknown as Record<string, number>).region_id,
+  ])
+  .seed();
+```
 
 #### 3. Create Integration Tests
 
@@ -151,15 +193,16 @@ pnpm seed              # Verify seeding works
 1. **Order Matters**: Seed entities in dependency order (parents before children)
 2. **Idempotency**: Use `INSERT OR REPLACE` to make seeds idempotent
 3. **Foreign Keys**: Enable with `PRAGMA foreign_keys = ON;`
-4. **Type Safety**: Always define TypeScript interfaces for seed data
+4. **Type Safety**: Always specify the generic type parameter: `SeederBuilder<typeof data[number]>(db)`
 5. **Testing**: Write integration tests for every seed entity
 6. **Documentation**: Add JSDoc comments explaining the entity's purpose
 
 ### Reference Implementation
 
-See the complete implementation of the markets seed (with foreign keys):
+See the complete implementation:
 
-- Data: [`src/seeds/markets.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.ts)
-- Seeding: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts) (markets section)
-- Tests: [`src/seeds/markets.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.integration.test.ts)
-- Resolvers: [`src/seeds/lib/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/resolvers.ts)
+- **SeederBuilder**: [`src/seeds/lib/SeederBuilder.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/SeederBuilder.ts)
+- **Data**: [`src/seeds/markets.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.ts)
+- **Seeding**: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts) (markets section)
+- **Tests**: [`src/seeds/markets.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.integration.test.ts)
+- **Unit Tests**: [`src/seeds/lib/SeederBuilder.test.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/SeederBuilder.test.ts)
