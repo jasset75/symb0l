@@ -128,8 +128,9 @@ Edit `src/seeds/index.ts`:
 
 **Complex case (with foreign keys)**: See `markets` in [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
 
-- Use `resolveForeignKey()` from [`src/seeds/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/resolvers.ts)
-- Signature: `resolveForeignKey(table, idColumn, whereColumn, whereValue)`
+- Use `resolveForeignKey(db, ...)` from [`src/seeds/lib/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/resolvers.ts)
+- Signature: `resolveForeignKey(db, table, idColumn, whereColumn, whereValue)`
+- The `db` instance is passed via dependency injection to avoid tight coupling
 
 #### 3. Create Integration Tests
 
@@ -161,4 +162,4 @@ See the complete implementation of the markets seed (with foreign keys):
 - Data: [`src/seeds/markets.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.ts)
 - Seeding: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts) (markets section)
 - Tests: [`src/seeds/markets.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.integration.test.ts)
-- Resolvers: [`src/seeds/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/resolvers.ts)
+- Resolvers: [`src/seeds/lib/resolvers.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/resolvers.ts)

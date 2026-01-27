@@ -1,4 +1,4 @@
-import { db } from "../db.js";
+import type { DatabaseSync } from "node:sqlite";
 
 /**
  * Foreign Key Resolver Helper
@@ -10,6 +10,7 @@ import { db } from "../db.js";
 /**
  * Generic foreign key resolver
  *
+ * @param db - Database instance (dependency injection)
  * @param table - Table name to query
  * @param idColumn - ID column name to return
  * @param whereColumn - Column to filter by
@@ -19,13 +20,14 @@ import { db } from "../db.js";
  *
  * @example
  * // Resolve exchange_id from exchange code
- * const exchangeId = resolveForeignKey("exchange", "exchange_id", "code", "EURONEXT");
+ * const exchangeId = resolveForeignKey(db, "exchange", "exchange_id", "code", "EURONEXT");
  *
  * @example
  * // Resolve market_id from market code
- * const marketId = resolveForeignKey("market", "market_id", "code", "EPA");
+ * const marketId = resolveForeignKey(db, "market", "market_id", "code", "EPA");
  */
 export function resolveForeignKey(
+  db: DatabaseSync,
   table: string,
   idColumn: string,
   whereColumn: string,

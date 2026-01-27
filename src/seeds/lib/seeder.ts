@@ -1,4 +1,4 @@
-import { db } from "../db.js";
+import type { DatabaseSync } from "node:sqlite";
 
 /**
  * Valid SQLite value types for node:sqlite
@@ -31,26 +31,28 @@ export interface SeederConfig<T> {
    * Optional transform function to modify items before mapping to values
    * Useful for resolving foreign keys or other pre-processing
    * @param item - The original data object
+   * @param db - Database instance for foreign key resolution
    * @returns Transformed object or the original if no transformation needed
    */
-  transform?: (item: T) => T | Record<string, SqliteValue>;
+  transform?: (item: T, db: DatabaseSync) => T | Record<string, SqliteValue>;
 }
 
 /**
  * Generic Seeder
  * Implements the seeding logic for any entity type
  *
+ * @param db - Database instance (dependency injection)
  * @param config - Seeder configuration
  * @returns Number of records seeded
  */
-export function seed<T>(config: SeederConfig<T>): number {
+export function seed<T>(db: DatabaseSync, config: SeederConfig<T>): number {
   console.log(`Seeding ${config.entityName}...`);
 
   const stmt = db.prepare(config.sql);
   let count = 0;
 
   for (const item of config.data) {
-    const transformedItem = config.transform ? config.transform(item) : item;
+    const transformedItem = config.transform ? config.transform(item, db) : item;
     const values = config.mapToValues(transformedItem as T);
     stmt.run(...values);
     count++;
