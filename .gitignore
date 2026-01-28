@@ -31,3 +31,8 @@ lefthook-local.yml
 # Data Sources
 symbol_source.txt
 twelve_data_source.json
+doc/THIRD_PARTY_DATA_SOURCES.md
+
+# IDE
+.vscode
+
