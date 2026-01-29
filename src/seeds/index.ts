@@ -1,7 +1,7 @@
 import { db } from "../db.js";
 import { SeederBuilder } from "./lib/SeederBuilder.js";
+import { countries } from "./countries.js";
 import { currencies } from "./currencies.js";
-import { exchanges } from "./exchanges.js";
 import { markets } from "./markets.js";
 
 /**
@@ -11,30 +11,32 @@ import { markets } from "./markets.js";
 export function seedDatabase(): void {
   console.log("Starting database seeding...");
 
-  // Seed exchanges (no dependencies)
-  new SeederBuilder<(typeof exchanges)[number]>(db)
-    .entity("exchanges")
-    .sql("INSERT OR REPLACE INTO exchange (code, name) VALUES (?, ?)")
-    .data(exchanges)
-    .mapToValues((exchange) => [exchange.code, exchange.name])
+  // Seed countries (no dependencies - ISO 3166-1 alpha-2)
+  new SeederBuilder<(typeof countries)[number]>(db)
+    .entity("countries")
+    .sql(
+      `INSERT OR REPLACE INTO country (country_code, name) 
+       VALUES (?, ?)`
+    )
+    .data(countries)
+    .mapToValues((country) => [country.country_code, country.name])
     .seed();
 
-  // Seed markets (depends on exchanges)
+  // Seed markets (depends on countries - MIC-based with ticker prefix)
   new SeederBuilder<(typeof markets)[number]>(db)
     .entity("markets")
-    .sql("INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)")
-    .data(markets)
-    .resolveForeignKey(
-      "exchange_id",
-      "exchange",
-      "exchange_id",
-      "code",
-      (market) => market.exchange_code
+    .sql(
+      `INSERT OR REPLACE INTO market (mic_code, ticker_prefix, name, title, country_code, timezone) 
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
+    .data(markets)
     .mapToValues((market) => [
-      (market as unknown as Record<string, number>).exchange_id,
-      market.code,
+      market.mic_code,
+      market.ticker_prefix,
       market.name,
+      market.title,
+      market.country_code,
+      market.timezone,
     ])
     .seed();
 

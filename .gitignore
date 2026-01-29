@@ -28,10 +28,8 @@ pnpm-debug.log*
 .mise.toml
 lefthook-local.yml
 
-# Data Sources
-symbol_source.txt
-twelve_data_source.json
-doc/THIRD_PARTY_DATA_SOURCES.md
+# Temporary files
+tmp
 
 # IDE
 .vscode

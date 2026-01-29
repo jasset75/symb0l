@@ -9,27 +9,28 @@ export function initDb() {
   db.exec("PRAGMA foreign_keys = ON;");
 
   const schema = `
-        -- Exchange
-        CREATE TABLE IF NOT EXISTS exchange (
-            exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT NOT NULL UNIQUE,
-            name TEXT
+        -- Country (ISO 3166-1 alpha-2)
+        CREATE TABLE IF NOT EXISTS country (
+            country_code TEXT PRIMARY KEY,
+            name TEXT NOT NULL
         );
 
-        -- Market
+        -- Market (ISO 10383 MIC-based with ticker prefix support)
         CREATE TABLE IF NOT EXISTS market (
             market_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            exchange_id INTEGER NOT NULL,
-            code TEXT NOT NULL,
-            name TEXT,
-            FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id),
-            UNIQUE(exchange_id, code)
+            mic_code TEXT NOT NULL UNIQUE,
+            ticker_prefix TEXT,
+            name TEXT NOT NULL,
+            title TEXT,
+            country_code TEXT NOT NULL,
+            timezone TEXT,
+            FOREIGN KEY (country_code) REFERENCES country(country_code)
         );
 
         -- Instrument
         CREATE TABLE IF NOT EXISTS instrument (
             instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            isin TEXT NOT NULL UNIQUE,
+            isin TEXT UNIQUE,
             name TEXT NOT NULL,
             instrument_type TEXT NOT NULL
         );

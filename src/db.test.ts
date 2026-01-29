@@ -22,23 +22,18 @@ describe("Database Initialization", () => {
 
   it("should create all required tables", () => {
     const schema = `
-            CREATE TABLE IF NOT EXISTS exchange (
-                exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT NOT NULL UNIQUE,
-                name TEXT
-            );
-
             CREATE TABLE IF NOT EXISTS market (
                 market_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                exchange_id INTEGER NOT NULL,
-                code TEXT NOT NULL,
-                FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id),
-                UNIQUE(exchange_id, code)
+                mic_code TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                title TEXT,
+                country TEXT,
+                timezone TEXT
             );
 
             CREATE TABLE IF NOT EXISTS instrument (
                 instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                isin TEXT NOT NULL UNIQUE,
+                isin TEXT UNIQUE,
                 name TEXT NOT NULL,
                 instrument_type TEXT NOT NULL
             );
@@ -80,66 +75,35 @@ describe("Database Initialization", () => {
 
     const tableNames = tables.map((t) => t.name);
 
-    assert.ok(tableNames.includes("exchange"), "exchange table should exist");
     assert.ok(tableNames.includes("market"), "market table should exist");
     assert.ok(tableNames.includes("instrument"), "instrument table should exist");
     assert.ok(tableNames.includes("listing"), "listing table should exist");
     assert.ok(tableNames.includes("currency"), "currency table should exist");
   });
 
-  it("should enforce UNIQUE constraint on exchange code", () => {
+  it("should enforce UNIQUE constraint on market MIC code", () => {
     const schema = `
-            CREATE TABLE exchange (
-                exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT NOT NULL UNIQUE,
-                name TEXT
+            CREATE TABLE market (
+                market_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mic_code TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL
             );
         `;
 
     testDb.exec(schema);
 
-    // Insert first exchange
-    testDb
-      .prepare("INSERT INTO exchange (code, name) VALUES (?, ?)")
-      .run("NYSE", "New York Stock Exchange");
+    // Insert first market
+    testDb.prepare("INSERT INTO market (mic_code, name) VALUES (?, ?)").run("XNAS", "NASDAQ");
 
-    // Attempt to insert duplicate code should throw
+    // Attempt to insert duplicate MIC code should throw
     assert.throws(
       () => {
-        testDb.prepare("INSERT INTO exchange (code, name) VALUES (?, ?)").run("NYSE", "Duplicate");
+        testDb
+          .prepare("INSERT INTO market (mic_code, name) VALUES (?, ?)")
+          .run("XNAS", "Duplicate");
       },
       /UNIQUE constraint failed/,
       "Should throw UNIQUE constraint error"
-    );
-  });
-
-  it("should enforce FOREIGN KEY constraint on market", () => {
-    const schema = `
-            PRAGMA foreign_keys = ON;
-            
-            CREATE TABLE exchange (
-                exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT NOT NULL UNIQUE,
-                name TEXT
-            );
-
-            CREATE TABLE market (
-                market_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                exchange_id INTEGER NOT NULL,
-                code TEXT NOT NULL,
-                FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id)
-            );
-        `;
-
-    testDb.exec(schema);
-
-    // Attempt to insert market with non-existent exchange_id should throw
-    assert.throws(
-      () => {
-        testDb.prepare("INSERT INTO market (exchange_id, code) VALUES (?, ?)").run(999, "INVALID");
-      },
-      /FOREIGN KEY constraint failed/,
-      "Should throw FOREIGN KEY constraint error"
     );
   });
 
@@ -147,7 +111,7 @@ describe("Database Initialization", () => {
     const schema = `
             CREATE TABLE instrument (
                 instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                isin TEXT NOT NULL UNIQUE,
+                isin TEXT UNIQUE,
                 name TEXT NOT NULL,
                 instrument_type TEXT NOT NULL
             );
@@ -167,20 +131,48 @@ describe("Database Initialization", () => {
     );
   });
 
+  it("should allow NULL ISIN for instruments without ISIN", () => {
+    const schema = `
+            CREATE TABLE instrument (
+                instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                isin TEXT UNIQUE,
+                name TEXT NOT NULL,
+                instrument_type TEXT NOT NULL
+            );
+        `;
+
+    testDb.exec(schema);
+
+    // Insert instrument without ISIN (e.g., forex pair)
+    assert.doesNotThrow(() => {
+      testDb
+        .prepare("INSERT INTO instrument (isin, name, instrument_type) VALUES (?, ?, ?)")
+        .run(null, "EUR/USD", "FOREX");
+    }, "Should allow NULL ISIN");
+
+    const instrument = testDb.prepare("SELECT * FROM instrument WHERE name = ?").get("EUR/USD") as {
+      isin: null;
+      name: string;
+    };
+
+    assert.strictEqual(instrument.isin, null, "ISIN should be NULL");
+    assert.strictEqual(instrument.name, "EUR/USD", "Name should match");
+  });
+
   it("should allow multiple initializations (idempotent)", () => {
     const schema = `
-            CREATE TABLE IF NOT EXISTS exchange (
-                exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT NOT NULL UNIQUE,
-                name TEXT
+            CREATE TABLE IF NOT EXISTS market (
+                market_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mic_code TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL
             );
         `;
 
     // First initialization
     testDb.exec(schema);
     testDb
-      .prepare("INSERT INTO exchange (code, name) VALUES (?, ?)")
-      .run("NYSE", "New York Stock Exchange");
+      .prepare("INSERT INTO market (mic_code, name) VALUES (?, ?)")
+      .run("XNYS", "New York Stock Exchange");
 
     // Second initialization should not error
     assert.doesNotThrow(() => {
@@ -188,12 +180,12 @@ describe("Database Initialization", () => {
     }, "Multiple initializations should not throw");
 
     // Data should be preserved
-    const exchanges = testDb.prepare("SELECT * FROM exchange").all() as Array<{
-      code: string;
+    const markets = testDb.prepare("SELECT * FROM market").all() as Array<{
+      mic_code: string;
       name: string;
     }>;
-    assert.strictEqual(exchanges.length, 1, "Should have one exchange");
-    assert.strictEqual(exchanges[0].code, "NYSE", "Exchange code should be preserved");
+    assert.strictEqual(markets.length, 1, "Should have one market");
+    assert.strictEqual(markets[0].mic_code, "XNYS", "Market MIC code should be preserved");
   });
 
   it("should handle currency table with TEXT primary key", () => {
@@ -235,23 +227,18 @@ describe("Database Schema Relationships", () => {
     const schema = `
             PRAGMA foreign_keys = ON;
 
-            CREATE TABLE exchange (
-                exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT NOT NULL UNIQUE,
-                name TEXT
-            );
-
             CREATE TABLE market (
                 market_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                exchange_id INTEGER NOT NULL,
-                code TEXT NOT NULL,
-                FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id),
-                UNIQUE(exchange_id, code)
+                mic_code TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                title TEXT,
+                country TEXT,
+                timezone TEXT
             );
 
             CREATE TABLE instrument (
                 instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                isin TEXT NOT NULL UNIQUE,
+                isin TEXT UNIQUE,
                 name TEXT NOT NULL,
                 instrument_type TEXT NOT NULL
             );
@@ -282,16 +269,12 @@ describe("Database Schema Relationships", () => {
   });
 
   it("should create complete data hierarchy", () => {
-    // Insert exchange
-    const exchangeResult = testDb
-      .prepare("INSERT INTO exchange (code, name) VALUES (?, ?)")
-      .run("NYSE", "New York Stock Exchange");
-    const exchangeId = Number(exchangeResult.lastInsertRowid);
-
     // Insert market
     const marketResult = testDb
-      .prepare("INSERT INTO market (exchange_id, code) VALUES (?, ?)")
-      .run(exchangeId, "EQUITY");
+      .prepare(
+        "INSERT INTO market (mic_code, name, title, country, timezone) VALUES (?, ?, ?, ?, ?)"
+      )
+      .run("XNAS", "NASDAQ", "Nasdaq", "United States", "America/New_York");
     const marketId = Number(marketResult.lastInsertRowid);
 
     // Insert instrument
@@ -323,13 +306,12 @@ describe("Database Schema Relationships", () => {
                 l.display_ticker,
                 i.name as instrument_name,
                 i.isin,
-                m.code as market_code,
-                e.code as exchange_code,
+                m.mic_code,
+                m.title as market_title,
                 c.currency_symbol
             FROM listing l
             JOIN instrument i ON l.instrument_id = i.instrument_id
             JOIN market m ON l.market_id = m.market_id
-            JOIN exchange e ON m.exchange_id = e.exchange_id
             JOIN currency c ON l.currency_id = c.currency_id
             WHERE l.symbol_code = ?
         `
@@ -338,14 +320,29 @@ describe("Database Schema Relationships", () => {
       symbol_code: string;
       instrument_name: string;
       isin: string;
-      exchange_code: string;
+      mic_code: string;
+      market_title: string;
       currency_symbol: string;
     };
 
     assert.strictEqual(listing.symbol_code, "AAPL", "Symbol code should match");
     assert.strictEqual(listing.instrument_name, "Apple Inc.", "Instrument name should match");
     assert.strictEqual(listing.isin, "US0378331005", "ISIN should match");
-    assert.strictEqual(listing.exchange_code, "NYSE", "Exchange code should match");
+    assert.strictEqual(listing.mic_code, "XNAS", "MIC code should match");
+    assert.strictEqual(listing.market_title, "Nasdaq", "Market title should match");
     assert.strictEqual(listing.currency_symbol, "$", "Currency symbol should match");
+  });
+
+  it("should enforce FOREIGN KEY constraint on listing", () => {
+    // Attempt to insert listing with non-existent market_id should throw
+    assert.throws(
+      () => {
+        testDb
+          .prepare("INSERT INTO listing (instrument_id, market_id, symbol_code) VALUES (?, ?, ?)")
+          .run(1, 999, "INVALID");
+      },
+      /FOREIGN KEY constraint failed/,
+      "Should throw FOREIGN KEY constraint error"
+    );
   });
 });

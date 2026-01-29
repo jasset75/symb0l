@@ -29,17 +29,45 @@ Master data table for currency information.
 | `currency_symbol` | TEXT      | Symbol representation ($, €, etc.)                                                  |
 | `decimal_digits`  | INTEGER   | Number of decimal places (0 for JPY, 2 for most)                                    |
 
-#### Exchange
+#### Country
 
-Exchange information (e.g., NYSE, NASDAQ).
+Countries using ISO 3166-1 alpha-2 standard codes.
+
+| Column         | Type      | Description                                    |
+| -------------- | --------- | ---------------------------------------------- |
+| `country_code` | TEXT (PK) | ISO 3166-1 alpha-2 code (e.g., US, ES, FR, JP) |
+| `name`         | TEXT      | Full country name (e.g., "United States")      |
+
+> [!NOTE]
+> The country table uses ISO 3166-1 alpha-2 codes as the primary key for standardization and can be extended with additional metadata in the future (region, default currency, etc.).
 
 #### Market
 
-Markets within exchanges.
+Trading venues identified by ISO 10383 Market Identifier Codes (MIC).
+
+| Column          | Type         | Description                                                                                             |
+| --------------- | ------------ | ------------------------------------------------------------------------------------------------------- |
+| `market_id`     | INTEGER (PK) | Primary key                                                                                             |
+| `mic_code`      | TEXT (UQ)    | [ISO 10383](https://www.iso20022.org/market-identifier-codes) Market Identifier Code (e.g., XNAS, XPAR) |
+| `ticker_prefix` | TEXT         | Ticker prefix used by platforms like Google Finance (e.g., NASDAQ, BME, EPA)                            |
+| `name`          | TEXT         | Short name (e.g., "NASDAQ", "Euronext")                                                                 |
+| `title`         | TEXT         | Full descriptive name (e.g., "Nasdaq", "Euronext Paris")                                                |
+| `country_code`  | TEXT (FK)    | ISO 3166-1 alpha-2 country code → `country(country_code)`                                               |
+| `timezone`      | TEXT         | IANA timezone identifier (e.g., "America/New_York")                                                     |
+
+> [!NOTE]
+> The `ticker_prefix` field enables compatibility with Google Finance symbol notation (e.g., `NASDAQ:AAPL`). Multiple markets may share the same ticker_prefix (e.g., NASDAQ variants XNAS, XNGS, XNMS all use "NASDAQ").
 
 #### Instrument
 
-Financial instruments with ISIN identification.
+Financial instruments with optional ISIN identification.
+
+| Column            | Type         | Description                                                    |
+| ----------------- | ------------ | -------------------------------------------------------------- |
+| `instrument_id`   | INTEGER (PK) | Primary key                                                    |
+| `isin`            | TEXT (UQ)    | [ISIN](https://www.isin.org/) code (nullable for forex/crypto) |
+| `name`            | TEXT         | Full instrument name                                           |
+| `instrument_type` | TEXT         | Type (STOCK, ETF, BOND, FOREX, CRYPTO, etc.)                   |
 
 #### Listing
 
@@ -99,7 +127,12 @@ pnpm dev:fresh
 
 ### Current Seeds
 
-- **G10 Currencies**: 10 most traded currencies (USD, EUR, JPY, GBP, AUD, CAD, CHF, NZD, NOK, SEK)
+- **Markets**: 30 major global trading venues (MIC-based)
+  - 6 Euronext markets (Paris, Amsterdam, Milan, Brussels, Lisbon, Dublin)
+  - 5 US markets (NYSE, NASDAQ variants, NYSE Arca, TSX)
+  - 10 European markets (Frankfurt, London, Madrid, etc.)
+  - 9 Asia-Pacific markets (Tokyo, Hong Kong, Shanghai, etc.)
+- **Currencies**: 10 G10 currencies (USD, EUR, JPY, GBP, AUD, CAD, CHF, NZD, NOK, SEK)
 
 ### Seed Files
 

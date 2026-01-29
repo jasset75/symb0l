@@ -1,24 +1,27 @@
 @startuml DataModel
 skinparam linetype ortho
 
-entity "Exchange" as exchange {
-  *exchange_id : INTEGER <<PK>>
+entity "Country" as country {
+  *country_code : TEXT <<PK>>
   --
-  *code : TEXT
-  name : TEXT
+  *name : TEXT
 }
 
 entity "Market" as market {
   *market_id : INTEGER <<PK>>
   --
-  *exchange_id : INTEGER <<FK>>
-  *code : TEXT
+  *mic_code : TEXT <<UQ>>
+  ticker_prefix : TEXT
+  *name : TEXT
+  title : TEXT
+  *country_code : TEXT <<FK>>
+  timezone : TEXT
 }
 
 entity "Instrument" as instrument {
   *instrument_id : INTEGER <<PK>>
   --
-  *isin : TEXT
+  isin : TEXT <<UQ, nullable>>
   *name : TEXT
   *instrument_type : TEXT
 }
@@ -43,8 +46,25 @@ entity "Currency" as currency {
   *decimal_digits : INTEGER
 }
 
-exchange ||..|{ market
+country ||..|{ market
 market ||..|{ listing
 instrument ||..|{ listing
 currency ||..|{ listing
+
+note right of country
+  ISO 3166-1 alpha-2
+  (US, ES, FR, JP, etc.)
+end note
+
+note right of market
+  Dual-code system:
+  • mic_code: ISO 10383 (XNAS)
+  • ticker_prefix: Google Finance (NASDAQ)
+end note
+
+note right of instrument
+  ISIN nullable for
+  forex and crypto
+end note
+
 @enduml

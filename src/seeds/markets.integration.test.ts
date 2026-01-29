@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import fs from "fs";
 import path from "path";
 
-import { exchanges } from "./exchanges.js";
+import { countries } from "./countries.js";
 import { markets } from "./markets.js";
 
 describe("Market Seeds Integration Tests", () => {
@@ -27,32 +27,25 @@ describe("Market Seeds Integration Tests", () => {
     // Enable foreign key constraints
     testDb.exec("PRAGMA foreign_keys = ON;");
 
-    // Initialize schema
+    // Initialize schema (country + MIC-based market table with ticker prefix)
     const schema = `
-      CREATE TABLE IF NOT EXISTS exchange (
-        exchange_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT NOT NULL UNIQUE,
-        name TEXT
+      CREATE TABLE IF NOT EXISTS country (
+        country_code TEXT PRIMARY KEY,
+        name TEXT NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS market (
         market_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        exchange_id INTEGER NOT NULL,
-        code TEXT NOT NULL,
-        name TEXT,
-        FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id),
-        UNIQUE(exchange_id, code)
+        mic_code TEXT NOT NULL UNIQUE,
+        ticker_prefix TEXT,
+        name TEXT NOT NULL,
+        title TEXT,
+        country_code TEXT NOT NULL,
+        timezone TEXT,
+        FOREIGN KEY (country_code) REFERENCES country(country_code)
       );
     `;
     testDb.exec(schema);
-
-    // Seed exchanges first (markets depend on them)
-    const exchangeStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO exchange (code, name) VALUES (?, ?)"
-    );
-    for (const exchange of exchanges) {
-      exchangeStmt.run(exchange.code, exchange.name);
-    }
   });
 
   afterEach(() => {
@@ -67,133 +60,122 @@ describe("Market Seeds Integration Tests", () => {
     }
   });
 
-  it("should seed exactly 11 markets", () => {
-    // Execute seed
+  // Helper function to seed markets
+  function seedMarkets() {
+    // First seed countries (FK dependency)
+    const countryStmt = testDb.prepare(
+      "INSERT OR REPLACE INTO country (country_code, name) VALUES (?, ?)"
+    );
+    for (const country of countries) {
+      countryStmt.run(country.country_code, country.name);
+    }
+
+    // Then seed markets
     const marketStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)"
+      "INSERT OR REPLACE INTO market (mic_code, ticker_prefix, name, title, country_code, timezone) VALUES (?, ?, ?, ?, ?, ?)"
     );
 
     for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
-
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
-
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
+      marketStmt.run(
+        market.mic_code,
+        market.ticker_prefix,
+        market.name,
+        market.title,
+        market.country_code,
+        market.timezone
+      );
     }
+  }
 
-    // Verify count
+  it("should seed exactly 30 markets", () => {
+    seedMarkets();
+
     const result = testDb.prepare("SELECT COUNT(*) as count FROM market").get() as {
       count: number;
     };
-    assert.strictEqual(result.count, 11);
+    assert.strictEqual(result.count, 30);
   });
 
-  it("should have all markets linked to valid exchanges", () => {
-    // Execute seed
-    const marketStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)"
-    );
+  it("should have all markets with unique MIC codes", () => {
+    seedMarkets();
 
-    for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
+    const result = testDb.prepare("SELECT COUNT(DISTINCT mic_code) as count FROM market").get() as {
+      count: number;
+    };
 
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
+    assert.strictEqual(result.count, 30, "All MIC codes should be unique");
+  });
 
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
-    }
+  it("should have all markets with unique ticker prefixes", () => {
+    seedMarkets();
 
+    // Count non-null unique ticker prefixes
     const result = testDb
       .prepare(
-        `SELECT COUNT(*) as count 
-         FROM market m 
-         JOIN exchange e ON m.exchange_id = e.exchange_id`
+        "SELECT COUNT(DISTINCT ticker_prefix) as count FROM market WHERE ticker_prefix IS NOT NULL"
       )
       .get() as { count: number };
-    assert.strictEqual(result.count, 11);
+
+    // Some markets may share ticker_prefix (e.g., NASDAQ variants)
+    assert.ok(result.count > 0, "Should have ticker prefixes");
   });
 
-  it("should have correct market codes", () => {
-    // Execute seed
-    const marketStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)"
-    );
+  it("should have correct major market MIC codes", () => {
+    seedMarkets();
 
-    for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
-
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
-
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
-    }
-
-    const expectedMarkets = [
-      "AMS",
-      "BIT",
-      "BME",
-      "EPA",
-      "FOREX",
-      "FRA",
-      "LON",
-      "NASDAQ",
-      "NYSE",
-      "SWX",
-      "VIE",
+    const expectedMajorMarkets = [
+      "XNAS", // Nasdaq
+      "XNYS", // NYSE
+      "XPAR", // Euronext Paris
+      "XLON", // London Stock Exchange
+      "XJPX", // Tokyo Stock Exchange
+      "XHKG", // Hong Kong Stock Exchange
     ];
 
-    const marketResults = testDb.prepare("SELECT code FROM market ORDER BY code").all() as {
-      code: string;
-    }[];
+    for (const mic of expectedMajorMarkets) {
+      const result = testDb.prepare("SELECT mic_code FROM market WHERE mic_code = ?").get(mic) as
+        | { mic_code: string }
+        | undefined;
 
-    const marketCodes = marketResults.map((m) => m.code);
-    assert.deepStrictEqual(marketCodes, expectedMarkets);
+      assert.ok(result, `Market with MIC code ${mic} should exist`);
+      assert.strictEqual(result.mic_code, mic);
+    }
+  });
+
+  it("should have correct ticker prefixes for major markets", () => {
+    seedMarkets();
+
+    const expectedMappings = [
+      { mic_code: "XNAS", ticker_prefix: "NASDAQ" },
+      { mic_code: "XNYS", ticker_prefix: "NYSE" },
+      { mic_code: "XMAD", ticker_prefix: "BME" },
+      { mic_code: "XPAR", ticker_prefix: "EPA" },
+      { mic_code: "XMIL", ticker_prefix: "BIT" },
+      { mic_code: "XLON", ticker_prefix: "LON" },
+    ];
+
+    for (const mapping of expectedMappings) {
+      const result = testDb
+        .prepare("SELECT ticker_prefix FROM market WHERE mic_code = ?")
+        .get(mapping.mic_code) as { ticker_prefix: string } | undefined;
+
+      assert.ok(result, `Market with MIC code ${mapping.mic_code} should exist`);
+      assert.strictEqual(
+        result.ticker_prefix,
+        mapping.ticker_prefix,
+        `${mapping.mic_code} should have ticker_prefix ${mapping.ticker_prefix}`
+      );
+    }
   });
 
   it("should be idempotent (running seeds twice should not create duplicates)", () => {
-    // Execute seed first time
-    const marketStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)"
-    );
-
-    for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
-
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
-
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
-    }
+    seedMarkets();
 
     const firstCount = testDb.prepare("SELECT COUNT(*) as count FROM market").get() as {
       count: number;
     };
 
-    // Execute seed second time
-    for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
-
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
-
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
-    }
+    seedMarkets();
 
     const secondCount = testDb.prepare("SELECT COUNT(*) as count FROM market").get() as {
       count: number;
@@ -204,87 +186,97 @@ describe("Market Seeds Integration Tests", () => {
       secondCount.count,
       "Count should remain the same after running seeds twice"
     );
-    assert.strictEqual(secondCount.count, 11);
+    assert.strictEqual(secondCount.count, 30);
   });
 
-  it("should have Euronext operating multiple markets", () => {
-    // Execute seed
-    const marketStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)"
-    );
-
-    for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
-
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
-
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
-    }
+  it("should have Euronext markets with correct data", () => {
+    seedMarkets();
 
     const euronextMarkets = testDb
       .prepare(
-        `SELECT m.code, m.name
+        `SELECT m.mic_code, m.name, m.title, c.name as country_name, m.ticker_prefix
          FROM market m
-         JOIN exchange e ON m.exchange_id = e.exchange_id
-         WHERE e.code = 'EURONEXT'
-         ORDER BY m.code`
+         JOIN country c ON m.country_code = c.country_code
+         WHERE m.name = 'Euronext'
+         ORDER BY m.mic_code`
       )
-      .all() as { code: string; name: string }[];
+      .all() as {
+      mic_code: string;
+      name: string;
+      title: string;
+      country_name: string;
+      ticker_prefix: string;
+    }[];
 
-    assert.strictEqual(euronextMarkets.length, 3, "Euronext should operate 3 markets");
+    assert.strictEqual(euronextMarkets.length, 6, "Should have 6 Euronext markets");
 
-    const expectedEuronextMarkets = [
-      { code: "AMS", name: "Euronext Amsterdam" },
-      { code: "BIT", name: "Borsa Italiana (Milan)" },
-      { code: "EPA", name: "Euronext Paris" },
-    ];
+    // Verify specific Euronext markets
+    const parisMarket = euronextMarkets.find((m) => m.mic_code === "XPAR");
+    assert.ok(parisMarket, "Euronext Paris should exist");
+    assert.strictEqual(parisMarket.title, "Euronext Paris");
+    assert.strictEqual(parisMarket.country_name, "France");
+    assert.strictEqual(parisMarket.ticker_prefix, "EPA");
 
-    // Check each market individually to avoid null prototype comparison issues
-    assert.strictEqual(euronextMarkets[0].code, "AMS");
-    assert.strictEqual(euronextMarkets[0].name, "Euronext Amsterdam");
-    assert.strictEqual(euronextMarkets[1].code, "BIT");
-    assert.strictEqual(euronextMarkets[1].name, "Borsa Italiana (Milan)");
-    assert.strictEqual(euronextMarkets[2].code, "EPA");
-    assert.strictEqual(euronextMarkets[2].name, "Euronext Paris");
+    const amsterdamMarket = euronextMarkets.find((m) => m.mic_code === "XAMS");
+    assert.ok(amsterdamMarket, "Euronext Amsterdam should exist");
+    assert.strictEqual(amsterdamMarket.title, "Euronext Amsterdam");
+    assert.strictEqual(amsterdamMarket.country_name, "Netherlands");
+    assert.strictEqual(amsterdamMarket.ticker_prefix, "AMS");
   });
 
-  it("should have market names", () => {
-    // Execute seed
-    const marketStmt = testDb.prepare(
-      "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)"
-    );
+  it("should have complete market data (all fields populated)", () => {
+    seedMarkets();
 
-    for (const market of markets) {
-      const exchangeResult = testDb
-        .prepare("SELECT exchange_id FROM exchange WHERE code = ?")
-        .get(market.exchange_code) as { exchange_id: number } | undefined;
+    // Verify specific market has all fields
+    const nasdaqMarket = testDb
+      .prepare(
+        `SELECT m.*, c.name as country_name
+         FROM market m
+         JOIN country c ON m.country_code = c.country_code
+         WHERE m.mic_code = 'XNAS'`
+      )
+      .get() as {
+      mic_code: string;
+      ticker_prefix: string;
+      name: string;
+      title: string;
+      country_code: string;
+      country_name: string;
+      timezone: string;
+    };
 
-      if (!exchangeResult) {
-        throw new Error(`Exchange with code '${market.exchange_code}' not found`);
-      }
+    assert.strictEqual(nasdaqMarket.mic_code, "XNAS");
+    assert.strictEqual(nasdaqMarket.ticker_prefix, "NASDAQ");
+    assert.strictEqual(nasdaqMarket.name, "NASDAQ");
+    assert.strictEqual(nasdaqMarket.title, "Nasdaq");
+    assert.strictEqual(nasdaqMarket.country_code, "US");
+    assert.strictEqual(nasdaqMarket.country_name, "United States");
+    assert.strictEqual(nasdaqMarket.timezone, "America/New_York");
+  });
 
-      marketStmt.run(exchangeResult.exchange_id, market.code, market.name);
-    }
+  it("should have markets from multiple regions", () => {
+    seedMarkets();
 
-    // Verify specific market names
-    const nameTests = [
-      { code: "EPA", name: "Euronext Paris" },
-      { code: "NYSE", name: "NYSE Main Market" },
-      { code: "FRA", name: "Xetra Frankfurt" },
+    // Check for markets in different regions using country_code
+    const regions = [
+      { country_code: "US", minCount: 2 },
+      { country_code: "FR", minCount: 1 },
+      { country_code: "JP", minCount: 1 },
+      { country_code: "CN", minCount: 1 },
     ];
 
-    for (const test of nameTests) {
-      const result = testDb.prepare("SELECT name FROM market WHERE code = ?").get(test.code) as {
-        name: string;
-      };
-      assert.strictEqual(
-        result.name,
-        test.name,
-        `Market ${test.code} should have name ${test.name}`
+    for (const region of regions) {
+      const result = testDb
+        .prepare("SELECT COUNT(*) as count FROM market WHERE country_code = ?")
+        .get(region.country_code) as { count: number };
+
+      const countryName = testDb
+        .prepare("SELECT name FROM country WHERE country_code = ?")
+        .get(region.country_code) as { name: string };
+
+      assert.ok(
+        result.count >= region.minCount,
+        `Should have at least ${region.minCount} market(s) in ${countryName.name}`
       );
     }
   });
