@@ -5,6 +5,8 @@ const dbPath = path.resolve("symb0l.db");
 const db = new DatabaseSync(dbPath);
 
 export function initDb() {
+  // Enable WAL (Write-Ahead Logging) mode for better concurrency and performance
+  db.exec("PRAGMA journal_mode = WAL;");
   // Enable foreign key constraints
   db.exec("PRAGMA foreign_keys = ON;");
 
