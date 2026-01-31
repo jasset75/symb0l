@@ -3,6 +3,7 @@ import { SeederBuilder } from "./lib/SeederBuilder.js";
 import { countries } from "./countries.js";
 import { currencies } from "./currencies.js";
 import { markets } from "./markets.js";
+import { instruments } from "./instruments.js";
 
 /**
  * Seeds the database with master data.
@@ -55,6 +56,22 @@ export function seedDatabase(): void {
       currency.code2,
       currency.currency_symbol,
       currency.decimal_digits,
+    ])
+    .seed();
+
+  // Seed instruments (foundational asset data)
+  new SeederBuilder<(typeof instruments)[number]>(db)
+    .entity("instruments")
+    .sql(
+      `INSERT OR REPLACE INTO instrument (instrument_id, isin, name, instrument_type)
+       VALUES (?, ?, ?, ?)`
+    )
+    .data(instruments)
+    .mapToValues((instrument) => [
+      instrument.instrument_id,
+      instrument.isin || null,
+      instrument.name,
+      instrument.instrument_type,
     ])
     .seed();
 

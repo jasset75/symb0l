@@ -127,16 +127,18 @@ pnpm dev:fresh
 
 ### Current Seeds
 
+- **Countries**: 23 key countries (ISO 3166-1 alpha-2)
 - **Markets**: 30 major global trading venues (MIC-based)
   - 6 Euronext markets (Paris, Amsterdam, Milan, Brussels, Lisbon, Dublin)
   - 5 US markets (NYSE, NASDAQ variants, NYSE Arca, TSX)
   - 10 European markets (Frankfurt, London, Madrid, etc.)
   - 9 Asia-Pacific markets (Tokyo, Hong Kong, Shanghai, etc.)
 - **Currencies**: 10 G10 currencies (USD, EUR, JPY, GBP, AUD, CAD, CHF, NZD, NOK, SEK)
+- **Instruments**: ~90 common financial instruments (Stocks, ETFs, Cryptos, etc.)
 
 ### Seed Files
 
-- **Data**: [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts)
+- **Data**: [`src/seeds/countries.ts`](file:///Users/juan/work/symb0l/src/seeds/countries.ts), [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts), [`src/seeds/instruments.ts`](file:///Users/juan/work/symb0l/src/seeds/instruments.ts)
 - **Orchestrator**: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
 
 ### Idempotency
