@@ -4,6 +4,7 @@ import { countries } from "./countries.js";
 import { currencies } from "./currencies.js";
 import { markets } from "./markets.js";
 import { instruments } from "./instruments.js";
+import { listings } from "./listings.js";
 
 /**
  * Seeds the database with master data.
@@ -72,6 +73,52 @@ export function seedDatabase(): void {
       instrument.isin || null,
       instrument.name,
       instrument.instrument_type,
+    ])
+    .seed();
+
+  // Seed listings (links instruments to markets)
+  new SeederBuilder<(typeof listings)[number]>(db)
+    .entity("listings")
+    .sql(
+      `INSERT OR REPLACE INTO listing (market_id, instrument_id, symbol_code, display_ticker, currency_id, listing_id)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .data(listings)
+    // Resolve market_id from market table using ticker_prefix (e.g., NASDAQ)
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.market_prefix,
+      table: "market",
+      filterColumn: "ticker_prefix",
+      valueColumn: "market_id",
+      targetField: "market_id",
+    })
+    // Resolve instrument_id from instrument table using isin
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.isin,
+      table: "instrument",
+      filterColumn: "isin",
+      valueColumn: "instrument_id",
+      targetField: "instrument_id",
+    })
+    // Resolve currency_id from currency table using code3 (e.g., USD)
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.currency_code,
+      table: "currency",
+      filterColumn: "code3",
+      valueColumn: "currency_id",
+      targetField: "currency_id",
+    })
+    .mapToValues((item) => [
+      // @ts-expect-error - market_id injected by resolveForeignKey
+      item.market_id,
+      // @ts-expect-error - instrument_id injected by resolveForeignKey
+      item.instrument_id,
+      item.symbol_code,
+      item.display_ticker,
+      // @ts-expect-error - currency_id injected by resolveForeignKey
+      item.currency_id,
+      // Let SQLite auto-generate listing_id (or we could map it if we had stable IDs)
+      null,
     ])
     .seed();
 
