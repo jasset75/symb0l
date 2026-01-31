@@ -9,11 +9,16 @@ type SqliteValue = string | number | null;
  * Foreign key resolution configuration
  */
 interface ForeignKeyResolution<T> {
-  targetField: string;
-  table: string;
-  idColumn: string;
-  whereColumn: string;
+  // Input: Get the value to search for
   sourceFieldExtractor: (item: T) => string | number;
+
+  // Lookup: Where to search
+  table: string;
+  filterColumn: string;
+  valueColumn: string;
+
+  // Output: Where to store the result
+  targetField: string;
 }
 
 /**
@@ -102,20 +107,30 @@ export class SeederBuilder<T extends object> {
    * @example
    * .resolveForeignKey("exchange_id", "exchange", "exchange_id", "code", (item) => item.exchange_code)
    */
-  resolveForeignKey(
-    targetField: string,
-    table: string,
-    idColumn: string,
-    whereColumn: string,
-    sourceFieldExtractor: (item: T) => string | number
-  ): this {
-    this.foreignKeyResolutions.push({
-      targetField,
-      table,
-      idColumn,
-      whereColumn,
-      sourceFieldExtractor,
-    });
+  /**
+   * Configures a foreign key resolution
+   *
+   * This method can be called multiple times to resolve multiple foreign keys.
+   *
+   * @param config - Configuration object for foreign key resolution
+   * @param config.sourceFieldExtractor - Function to extract the search value from the current seed item
+   * @param config.table - Database table to query for the ID (e.g., 'currency')
+   * @param config.filterColumn - Column in the target table to search by (e.g., 'code3')
+   * @param config.valueColumn - Column name of the value to retrieve (e.g., 'currency_id')
+   * @param config.targetField - Field name where the resolved ID will be stored in the item (e.g., 'currency_id')
+   * @returns this builder instance for chaining
+   *
+   * @example
+   * .resolveForeignKey({
+   *   sourceFieldExtractor: (item) => item.market_prefix,
+   *   table: "market",
+   *   filterColumn: "ticker_prefix",
+   *   valueColumn: "market_id",
+   *   targetField: "market_id",
+   * })
+   */
+  resolveForeignKey(config: ForeignKeyResolution<T>): this {
+    this.foreignKeyResolutions.push(config);
     return this;
   }
 
@@ -191,8 +206,8 @@ export class SeederBuilder<T extends object> {
       const sourceValue = resolution.sourceFieldExtractor(item);
       const resolvedId = this.resolveForeignKeyValue(
         resolution.table,
-        resolution.idColumn,
-        resolution.whereColumn,
+        resolution.valueColumn,
+        resolution.filterColumn,
         sourceValue
       );
       result[resolution.targetField] = resolvedId;
@@ -207,18 +222,18 @@ export class SeederBuilder<T extends object> {
    */
   private resolveForeignKeyValue(
     table: string,
-    idColumn: string,
-    whereColumn: string,
-    whereValue: string | number
+    valueColumn: string,
+    filterColumn: string,
+    filterValue: string | number
   ): number {
     const result = this.db
-      .prepare(`SELECT ${idColumn} FROM ${table} WHERE ${whereColumn} = ?`)
-      .get(whereValue) as Record<string, number> | undefined;
+      .prepare(`SELECT ${valueColumn} FROM ${table} WHERE ${filterColumn} = ?`)
+      .get(filterValue) as Record<string, number> | undefined;
 
     if (!result) {
-      throw new Error(`${table}: ${whereColumn}='${whereValue}' not found`);
+      throw new Error(`${table}: ${filterColumn}='${filterValue}' not found`);
     }
 
-    return result[idColumn];
+    return result[valueColumn];
   }
 }

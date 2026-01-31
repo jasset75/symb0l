@@ -190,7 +190,13 @@ describe("SeederBuilder", () => {
         .entity("child entities")
         .sql("INSERT OR REPLACE INTO child (code, name, parent_id) VALUES (?, ?, ?)")
         .data(childData)
-        .resolveForeignKey("parent_id", "parent", "id", "code", (item) => item.parentCode)
+        .resolveForeignKey({
+          targetField: "parent_id",
+          table: "parent",
+          valueColumn: "id",
+          filterColumn: "code",
+          sourceFieldExtractor: (item) => item.parentCode,
+        })
         .mapToValues((item) => [
           item.code,
           item.name,
@@ -259,8 +265,20 @@ describe("SeederBuilder", () => {
           "INSERT OR REPLACE INTO product (code, name, category_id, region_id) VALUES (?, ?, ?, ?)"
         )
         .data(productData)
-        .resolveForeignKey("category_id", "category", "id", "code", (item) => item.categoryCode)
-        .resolveForeignKey("region_id", "region", "id", "code", (item) => item.regionCode)
+        .resolveForeignKey({
+          targetField: "category_id",
+          table: "category",
+          valueColumn: "id",
+          filterColumn: "code",
+          sourceFieldExtractor: (item) => item.categoryCode,
+        })
+        .resolveForeignKey({
+          targetField: "region_id",
+          table: "region",
+          valueColumn: "id",
+          filterColumn: "code",
+          sourceFieldExtractor: (item) => item.regionCode,
+        })
         .mapToValues((item) => [
           item.code,
           item.name,
@@ -311,7 +329,13 @@ describe("SeederBuilder", () => {
             .entity("child entities")
             .sql("INSERT OR REPLACE INTO child (code, name, parent_id) VALUES (?, ?, ?)")
             .data(childData)
-            .resolveForeignKey("parent_id", "parent", "id", "code", (item) => item.parentCode)
+            .resolveForeignKey({
+              targetField: "parent_id",
+              table: "parent",
+              valueColumn: "id",
+              filterColumn: "code",
+              sourceFieldExtractor: (item) => item.parentCode,
+            })
             .mapToValues((item) => [
               item.code,
               item.name,
