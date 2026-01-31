@@ -264,4 +264,12 @@ export const markets: MarketData[] = [
     country_code: "IN",
     timezone: "Asia/Kolkata",
   },
+  {
+    mic_code: "XFX",
+    ticker_prefix: "CURRENCY",
+    name: "Forex",
+    title: "Foreign Exchange",
+    country_code: "US",
+    timezone: "UTC",
+  },
 ];
