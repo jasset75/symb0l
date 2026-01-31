@@ -135,10 +135,11 @@ pnpm dev:fresh
   - 9 Asia-Pacific markets (Tokyo, Hong Kong, Shanghai, etc.)
 - **Currencies**: 10 G10 currencies (USD, EUR, JPY, GBP, AUD, CAD, CHF, NZD, NOK, SEK)
 - **Instruments**: ~90 common financial instruments (Stocks, ETFs, Cryptos, etc.)
+- **Listings**: ~90 instrument listings linking instruments to markets
 
 ### Seed Files
 
-- **Data**: [`src/seeds/countries.ts`](file:///Users/juan/work/symb0l/src/seeds/countries.ts), [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts), [`src/seeds/instruments.ts`](file:///Users/juan/work/symb0l/src/seeds/instruments.ts)
+- **Data**: [`src/seeds/countries.ts`](file:///Users/juan/work/symb0l/src/seeds/countries.ts), [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts), [`src/seeds/instruments.ts`](file:///Users/juan/work/symb0l/src/seeds/instruments.ts), [`src/seeds/listings.ts`](file:///Users/juan/work/symb0l/src/seeds/listings.ts)
 - **Orchestrator**: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
 
 ### Idempotency
