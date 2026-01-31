@@ -87,13 +87,13 @@ describe("Market Seeds Integration Tests", () => {
     }
   }
 
-  it("should seed exactly 30 markets", () => {
+  it("should seed exactly 31 markets", () => {
     seedMarkets();
 
     const result = testDb.prepare("SELECT COUNT(*) as count FROM market").get() as {
       count: number;
     };
-    assert.strictEqual(result.count, 30);
+    assert.strictEqual(result.count, 31);
   });
 
   it("should have all markets with unique MIC codes", () => {
@@ -103,7 +103,7 @@ describe("Market Seeds Integration Tests", () => {
       count: number;
     };
 
-    assert.strictEqual(result.count, 30, "All MIC codes should be unique");
+    assert.strictEqual(result.count, 31, "All MIC codes should be unique");
   });
 
   it("should have all markets with unique ticker prefixes", () => {
@@ -186,7 +186,7 @@ describe("Market Seeds Integration Tests", () => {
       secondCount.count,
       "Count should remain the same after running seeds twice"
     );
-    assert.strictEqual(secondCount.count, 30);
+    assert.strictEqual(secondCount.count, 31);
   });
 
   it("should have Euronext markets with correct data", () => {
