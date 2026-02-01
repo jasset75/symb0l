@@ -80,8 +80,8 @@ export function seedDatabase(): void {
   new SeederBuilder<(typeof listings)[number]>(db)
     .entity("listings")
     .sql(
-      `INSERT OR REPLACE INTO listing (market_id, instrument_id, symbol_code, display_ticker, currency_id, listing_id)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT OR REPLACE INTO listing (market_id, instrument_id, symbol_code, currency_id, listing_id)
+       VALUES (?, ?, ?, ?, ?)`
     )
     .data(listings)
     // Resolve market_id from market table using ticker_prefix (e.g., NASDAQ)
@@ -114,7 +114,6 @@ export function seedDatabase(): void {
       // @ts-expect-error - instrument_id injected by resolveForeignKey
       item.instrument_id,
       item.symbol_code,
-      item.display_ticker,
       // @ts-expect-error - currency_id injected by resolveForeignKey
       item.currency_id,
       // Let SQLite auto-generate listing_id (or we could map it if we had stable IDs)

@@ -293,9 +293,9 @@ describe("Database Schema Relationships", () => {
     // Insert listing
     testDb
       .prepare(
-        "INSERT INTO listing (instrument_id, market_id, symbol_code, display_ticker, currency_id) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO listing (instrument_id, market_id, symbol_code, currency_id) VALUES (?, ?, ?, ?)"
       )
-      .run(instrumentId, marketId, "AAPL", "AAPL", "USD");
+      .run(instrumentId, marketId, "AAPL", "USD");
 
     // Verify complete data
     const listing = testDb
@@ -303,7 +303,6 @@ describe("Database Schema Relationships", () => {
         `
             SELECT 
                 l.symbol_code,
-                l.display_ticker,
                 i.name as instrument_name,
                 i.isin,
                 m.mic_code,

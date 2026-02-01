@@ -32,7 +32,6 @@ entity "Listing" as listing {
   *instrument_id : INTEGER <<FK>>
   *market_id : INTEGER <<FK>>
   *symbol_code : TEXT
-  display_ticker : TEXT
   currency_id : TEXT <<FK>>
 }
 

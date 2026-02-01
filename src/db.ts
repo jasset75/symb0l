@@ -43,7 +43,6 @@ export function initDb() {
             instrument_id INTEGER NOT NULL,
             market_id INTEGER NOT NULL,
             symbol_code TEXT NOT NULL,
-            display_ticker TEXT,
             currency_id TEXT,
             FOREIGN KEY (instrument_id) REFERENCES instrument(instrument_id),
             FOREIGN KEY (market_id) REFERENCES market(market_id),
