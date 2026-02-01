@@ -27,6 +27,7 @@ pnpm-debug.log*
 # Tooling
 .mise.toml
 lefthook-local.yml
+*.sqbpro
 
 # Temporary files
 tmp
