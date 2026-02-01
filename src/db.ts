@@ -59,6 +59,26 @@ export function initDb() {
             currency_symbol TEXT NOT NULL,
             decimal_digits INTEGER NOT NULL DEFAULT 2
         );
+
+        -- Market Listing View (Human Friendly)
+        CREATE VIEW IF NOT EXISTS view_listings AS
+        SELECT
+            l.listing_id,
+            l.symbol_code,
+            i.name AS instrument_name,
+            i.instrument_type,
+            m.name AS market_name,
+            m.mic_code AS market_mic,
+            m.timezone AS market_timezone,
+            c.country_code,
+            c.name AS country_name,
+            cur.code3 AS currency_code,
+            cur.currency_symbol
+        FROM listing l
+        JOIN instrument i ON l.instrument_id = i.instrument_id
+        JOIN market m ON l.market_id = m.market_id
+        JOIN country c ON m.country_code = c.country_code
+        JOIN currency cur ON l.currency_id = cur.currency_id;
     `;
   db.exec(schema);
   console.log("Database initialized at", dbPath);

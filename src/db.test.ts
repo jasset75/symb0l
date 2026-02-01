@@ -22,13 +22,19 @@ describe("Database Initialization", () => {
 
   it("should create all required tables", () => {
     const schema = `
+            CREATE TABLE IF NOT EXISTS country (
+                country_code TEXT PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS market (
                 market_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 mic_code TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 title TEXT,
-                country TEXT,
-                timezone TEXT
+                country_code TEXT NOT NULL,
+                timezone TEXT,
+                FOREIGN KEY (country_code) REFERENCES country(country_code)
             );
 
             CREATE TABLE IF NOT EXISTS instrument (
@@ -227,13 +233,19 @@ describe("Database Schema Relationships", () => {
     const schema = `
             PRAGMA foreign_keys = ON;
 
+            CREATE TABLE country (
+                country_code TEXT PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+
             CREATE TABLE market (
                 market_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 mic_code TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 title TEXT,
-                country TEXT,
-                timezone TEXT
+                country_code TEXT NOT NULL,
+                timezone TEXT,
+                FOREIGN KEY (country_code) REFERENCES country(country_code)
             );
 
             CREATE TABLE instrument (
@@ -263,18 +275,42 @@ describe("Database Schema Relationships", () => {
                 code2 TEXT NOT NULL,
                 currency_symbol TEXT NOT NULL
             );
+
+            CREATE VIEW view_listings AS
+            SELECT
+                l.listing_id,
+                l.symbol_code,
+                i.name AS instrument_name,
+                i.instrument_type,
+                m.name AS market_name,
+                m.mic_code AS market_mic,
+                m.timezone AS market_timezone,
+                c.country_code,
+                c.name AS country_name,
+                cur.code3 AS currency_code,
+                cur.currency_symbol
+            FROM listing l
+            JOIN instrument i ON l.instrument_id = i.instrument_id
+            JOIN market m ON l.market_id = m.market_id
+            JOIN country c ON m.country_code = c.country_code
+            JOIN currency cur ON l.currency_id = cur.currency_id;
         `;
 
     testDb.exec(schema);
   });
 
   it("should create complete data hierarchy", () => {
+    // Insert country
+    testDb
+      .prepare("INSERT INTO country (country_code, name) VALUES (?, ?)")
+      .run("US", "United States");
+
     // Insert market
     const marketResult = testDb
       .prepare(
-        "INSERT INTO market (mic_code, name, title, country, timezone) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO market (mic_code, name, title, country_code, timezone) VALUES (?, ?, ?, ?, ?)"
       )
-      .run("XNAS", "NASDAQ", "Nasdaq", "United States", "America/New_York");
+      .run("XNAS", "NASDAQ", "Nasdaq", "US", "America/New_York");
     const marketId = Number(marketResult.lastInsertRowid);
 
     // Insert instrument
@@ -343,5 +379,62 @@ describe("Database Schema Relationships", () => {
       /FOREIGN KEY constraint failed/,
       "Should throw FOREIGN KEY constraint error"
     );
+  });
+
+  it("should create view_listings with human friendly data", () => {
+    // Insert country
+    testDb
+      .prepare("INSERT INTO country (country_code, name) VALUES (?, ?)")
+      .run("US", "United States");
+
+    // Insert market
+    const marketResult = testDb
+      .prepare(
+        "INSERT INTO market (mic_code, name, title, country_code, timezone) VALUES (?, ?, ?, ?, ?)"
+      )
+      .run("XNAS", "NASDAQ", "Nasdaq", "US", "America/New_York");
+    const marketId = Number(marketResult.lastInsertRowid);
+
+    // Insert instrument
+    const instrumentResult = testDb
+      .prepare("INSERT INTO instrument (isin, name, instrument_type) VALUES (?, ?, ?)")
+      .run("US0378331005", "Apple Inc.", "STOCK");
+    const instrumentId = Number(instrumentResult.lastInsertRowid);
+
+    // Insert currency
+    testDb
+      .prepare(
+        "INSERT INTO currency (currency_id, name, code3, code2, currency_symbol) VALUES (?, ?, ?, ?, ?)"
+      )
+      .run("USD", "US Dollar", "USD", "US", "$");
+
+    // Insert listing
+    testDb
+      .prepare(
+        "INSERT INTO listing (instrument_id, market_id, symbol_code, currency_id) VALUES (?, ?, ?, ?)"
+      )
+      .run(instrumentId, marketId, "AAPL", "USD");
+
+    // Query view
+    const viewResult = testDb
+      .prepare("SELECT * FROM view_listings WHERE symbol_code = ?")
+      .get("AAPL") as {
+      symbol_code: string;
+      instrument_name: string;
+      market_name: string;
+      market_timezone: string;
+      country_code: string;
+      country_name: string;
+      currency_code: string;
+    };
+
+    assert.ok(viewResult, "View result should exist");
+    assert.strictEqual(viewResult.symbol_code, "AAPL");
+    assert.strictEqual(viewResult.instrument_name, "Apple Inc.");
+    assert.strictEqual(viewResult.market_name, "NASDAQ");
+    assert.strictEqual(viewResult.market_timezone, "America/New_York", "Timezone should match");
+    assert.strictEqual(viewResult.country_code, "US", "Country Code should match");
+    assert.strictEqual(viewResult.country_name, "United States");
+    assert.strictEqual(viewResult.currency_code, "USD");
   });
 });

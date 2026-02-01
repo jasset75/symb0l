@@ -45,10 +45,25 @@ entity "Currency" as currency {
   *decimal_digits : INTEGER
 }
 
+entity "view_listings" as view_listings <<view>> {
+  listing_id : INTEGER
+  symbol_code : TEXT
+  instrument_name : TEXT
+  instrument_type : TEXT
+  market_name : TEXT
+  market_mic : TEXT
+  market_timezone : TEXT
+  country_code : TEXT
+  country_name : TEXT
+  currency_code : TEXT
+  currency_symbol : TEXT
+}
+
 country ||..|{ market
 market ||..|{ listing
 instrument ||..|{ listing
 currency ||..|{ listing
+listing ..> view_listings : projects
 
 note right of country
   ISO 3166-1 alpha-2

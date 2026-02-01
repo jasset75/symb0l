@@ -29,6 +29,24 @@ Master data table for currency information.
 | `currency_symbol` | TEXT      | Symbol representation ($, €, etc.)                                                  |
 | `decimal_digits`  | INTEGER   | Number of decimal places (0 for JPY, 2 for most)                                    |
 
+#### `view_listings`
+
+A denormalized view of listings with human-readable names for instruments, markets, countries, and currencies.
+
+| Column            | Type      | Description                           |
+| :---------------- | :-------- | :------------------------------------ |
+| `listing_id`      | `INTEGER` | Unique identifier.                    |
+| `symbol_code`     | `TEXT`    | Ticker symbol in the specific market. |
+| `instrument_name` | `TEXT`    | Name of the instrument.               |
+| `instrument_type` | `TEXT`    | Type of instrument.                   |
+| `market_name`     | `TEXT`    | Name of the market.                   |
+| `market_mic`      | `TEXT`    | ISO 10383 MIC code.                   |
+| `market_timezone` | `TEXT`    | IANA timezone identifier.             |
+| `country_code`    | `TEXT`    | ISO 3166-1 alpha-2 country code.      |
+| `country_name`    | `TEXT`    | Name of the country.                  |
+| `currency_code`   | `TEXT`    | ISO 4217 Currency code (3 chars).     |
+| `currency_symbol` | `TEXT`    | Currency symbol ($, €, etc.).         |
+
 #### Country
 
 Countries using ISO 3166-1 alpha-2 standard codes.
