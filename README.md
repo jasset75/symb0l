@@ -122,3 +122,7 @@ Create a `lefthook-local.yml` file (gitignored) for local hook customizations.
 ## License
 
 Dual-licensed under MIT or Apache 2.0.
+
+## GitHub Game
+
+![My GitHub Game](game.gif)
