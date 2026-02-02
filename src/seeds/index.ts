@@ -5,6 +5,13 @@ import { currencies } from "./currencies.js";
 import { markets } from "./markets.js";
 import { instruments } from "./instruments.js";
 import { listings } from "./listings.js";
+import { profiles } from "./profiles.js";
+import { riskLevels } from "./risk_levels.js";
+import { assetClassLevels } from "./asset_class_levels.js";
+import { marketCaps } from "./market_caps.js";
+import { sectors } from "./sectors.js";
+import { subIndustries } from "./sub_industries.js";
+import { countryExposures } from "./country_exposures.js";
 
 /**
  * Seeds the database with master data.
@@ -60,19 +67,165 @@ export function seedDatabase(): void {
     ])
     .seed();
 
-  // Seed instruments (foundational asset data)
-  new SeederBuilder<(typeof instruments)[number]>(db)
+  // --- Metadata Tables Seeding ---
+
+  new SeederBuilder<(typeof profiles)[number]>(db)
+    .entity("profiles")
+    .sql("INSERT OR REPLACE INTO profile (profile_id, name) VALUES (?, ?)")
+    .data(profiles)
+    .mapToValues((item) => [item.profile_id, item.name])
+    .seed();
+
+  new SeederBuilder<(typeof riskLevels)[number]>(db)
+    .entity("risk_levels")
+    .sql("INSERT OR REPLACE INTO risk_level (risk_level_id, name, weight) VALUES (?, ?, ?)")
+    .data(riskLevels)
+    .mapToValues((item) => [item.risk_level_id, item.name, item.weight])
+    .seed();
+
+  new SeederBuilder<(typeof assetClassLevels)[number]>(db)
+    .entity("asset_class_levels")
+    .sql(
+      "INSERT OR REPLACE INTO asset_class_level (asset_class_level_id, name, description) VALUES (?, ?, ?)"
+    )
+    .data(assetClassLevels)
+    .mapToValues((item) => [item.asset_class_level_id, item.name, item.description])
+    .seed();
+
+  new SeederBuilder<(typeof marketCaps)[number]>(db)
+    .entity("market_caps")
+    .sql("INSERT OR REPLACE INTO market_cap (market_cap_id, name) VALUES (?, ?)")
+    .data(marketCaps)
+    .mapToValues((item) => [item.market_cap_id, item.name])
+    .seed();
+
+  new SeederBuilder<(typeof sectors)[number]>(db)
+    .entity("sectors")
+    .sql("INSERT OR REPLACE INTO sector (sector_id, name, description) VALUES (?, ?, ?)")
+    .data(sectors)
+    .mapToValues((item) => [item.sector_id, item.name, item.description])
+    .seed();
+
+  new SeederBuilder<(typeof subIndustries)[number]>(db)
+    .entity("sub_industries")
+    .sql(
+      "INSERT OR REPLACE INTO sub_industry (sub_industry_id, name, description) VALUES (?, ?, ?)"
+    )
+    .data(subIndustries)
+    .mapToValues((item) => [item.sub_industry_id, item.name, item.description])
+    .seed();
+
+  new SeederBuilder<(typeof countryExposures)[number]>(db)
+    .entity("country_exposures")
+    .sql("INSERT OR REPLACE INTO country_exposure (country_exposure_id, name) VALUES (?, ?)")
+    .data(countryExposures)
+    .mapToValues((item) => [item.country_exposure_id, item.name])
+    .seed();
+
+  // --- Instrument Seeding (Updated with Metadata Resolution) ---
+
+  interface SeedInstrument {
+    instrument_id: number;
+    isin: string | null;
+    name: string;
+    instrument_type: string;
+    profile_name: string | null;
+    risk_level_name: string | null;
+    asset_class_level_name: string | null;
+    market_cap_name: string | null;
+    sector_name: string | null;
+    sub_industry_name: string | null;
+    country_exposure_name: string | null;
+    // These will be resolved
+    profile_id?: number | null;
+    risk_level_id?: number | null;
+    asset_class_level_id?: number | null;
+    market_cap_id?: number | null;
+    sector_id?: number | null;
+    sub_industry_id?: number | null;
+    country_exposure_id?: number | null;
+  }
+
+  new SeederBuilder<SeedInstrument>(db)
     .entity("instruments")
     .sql(
-      `INSERT OR REPLACE INTO instrument (instrument_id, isin, name, instrument_type)
-       VALUES (?, ?, ?, ?)`
+      `INSERT OR REPLACE INTO instrument (
+            instrument_id, isin, name, instrument_type,
+            profile_id, risk_level_id, asset_class_level_id, market_cap_id,
+            sector_id, sub_industry_id, country_exposure_id
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .data(instruments)
-    .mapToValues((instrument) => [
+    // Resolvers for Metadata
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.profile_name || "",
+      table: "profile",
+      filterColumn: "name",
+      valueColumn: "profile_id",
+      targetField: "profile_id",
+      optional: true,
+    })
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.risk_level_name || "",
+      table: "risk_level",
+      filterColumn: "name",
+      valueColumn: "risk_level_id",
+      targetField: "risk_level_id",
+      optional: true,
+    })
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.asset_class_level_name || "",
+      table: "asset_class_level",
+      filterColumn: "name",
+      valueColumn: "asset_class_level_id",
+      targetField: "asset_class_level_id",
+      optional: true,
+    })
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.market_cap_name || "",
+      table: "market_cap",
+      filterColumn: "name",
+      valueColumn: "market_cap_id",
+      targetField: "market_cap_id",
+      optional: true,
+    })
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.sector_name || "",
+      table: "sector",
+      filterColumn: "name",
+      valueColumn: "sector_id",
+      targetField: "sector_id",
+      optional: true,
+    })
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.sub_industry_name || "",
+      table: "sub_industry",
+      filterColumn: "name",
+      valueColumn: "sub_industry_id",
+      targetField: "sub_industry_id",
+      optional: true,
+    })
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.country_exposure_name || "",
+      table: "country_exposure",
+      filterColumn: "name",
+      valueColumn: "country_exposure_id",
+      targetField: "country_exposure_id",
+      optional: true,
+    })
+    .mapToValues((instrument: SeedInstrument) => [
       instrument.instrument_id,
       instrument.isin || null,
       instrument.name,
       instrument.instrument_type,
+      instrument.profile_id || null,
+      instrument.risk_level_id || null,
+      instrument.asset_class_level_id || null,
+      instrument.market_cap_id || null,
+      instrument.sector_id || null,
+      instrument.sub_industry_id || null,
+      instrument.country_exposure_id || null,
     ])
     .seed();
 
