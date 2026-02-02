@@ -10,6 +10,8 @@ build
 *.db
 *.db-journal
 test-*.db
+*.db-shm
+*.db-wal
 
 # Environment variables
 .env
@@ -34,4 +36,3 @@ tmp
 
 # IDE
 .vscode
-
