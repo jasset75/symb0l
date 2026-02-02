@@ -8,9 +8,12 @@ type SqliteValue = string | number | null;
 /**
  * Foreign key resolution configuration
  */
+/**
+ * Foreign key resolution configuration
+ */
 interface ForeignKeyResolution<T> {
   // Input: Get the value to search for
-  sourceFieldExtractor: (item: T) => string | number;
+  sourceFieldExtractor: (item: T) => string | number | null;
 
   // Lookup: Where to search
   table: string;
@@ -19,6 +22,9 @@ interface ForeignKeyResolution<T> {
 
   // Output: Where to store the result
   targetField: string;
+
+  // Optional: If true, returns null instead of throwing when not found
+  optional?: boolean;
 }
 
 /**
@@ -97,27 +103,13 @@ export class SeederBuilder<T extends object> {
    *
    * This method can be called multiple times to resolve multiple foreign keys.
    *
-   * @param targetField - Field name where the resolved ID will be stored
-   * @param table - Table to query for the foreign key
-   * @param idColumn - Column name of the ID to retrieve
-   * @param whereColumn - Column to filter by
-   * @param sourceFieldExtractor - Function to extract the source value from the item
-   * @returns this builder instance for chaining
-   *
-   * @example
-   * .resolveForeignKey("exchange_id", "exchange", "exchange_id", "code", (item) => item.exchange_code)
-   */
-  /**
-   * Configures a foreign key resolution
-   *
-   * This method can be called multiple times to resolve multiple foreign keys.
-   *
    * @param config - Configuration object for foreign key resolution
    * @param config.sourceFieldExtractor - Function to extract the search value from the current seed item
    * @param config.table - Database table to query for the ID (e.g., 'currency')
    * @param config.filterColumn - Column in the target table to search by (e.g., 'code3')
    * @param config.valueColumn - Column name of the value to retrieve (e.g., 'currency_id')
    * @param config.targetField - Field name where the resolved ID will be stored in the item (e.g., 'currency_id')
+   * @param config.optional - If true, returns null if the lookup fails instead of throwing an error
    * @returns this builder instance for chaining
    *
    * @example
@@ -204,11 +196,25 @@ export class SeederBuilder<T extends object> {
 
     for (const resolution of this.foreignKeyResolutions) {
       const sourceValue = resolution.sourceFieldExtractor(item);
+
+      // If source value is null/empty and optional, skip lookup
+      if ((sourceValue === null || sourceValue === "") && resolution.optional) {
+        result[resolution.targetField] = null;
+        continue;
+      }
+
+      if (sourceValue === null || sourceValue === undefined) {
+        throw new Error(
+          `SeederBuilder: Source value for ${resolution.table} lookup is null/undefined, but not marked optional.`
+        );
+      }
+
       const resolvedId = this.resolveForeignKeyValue(
         resolution.table,
         resolution.valueColumn,
         resolution.filterColumn,
-        sourceValue
+        sourceValue,
+        resolution.optional
       );
       result[resolution.targetField] = resolvedId;
     }
@@ -224,13 +230,17 @@ export class SeederBuilder<T extends object> {
     table: string,
     valueColumn: string,
     filterColumn: string,
-    filterValue: string | number
-  ): number {
+    filterValue: string | number,
+    optional: boolean = false
+  ): number | null {
     const result = this.db
       .prepare(`SELECT ${valueColumn} FROM ${table} WHERE ${filterColumn} = ?`)
       .get(filterValue) as Record<string, number> | undefined;
 
     if (!result) {
+      if (optional) {
+        return null;
+      }
       throw new Error(`${table}: ${filterColumn}='${filterValue}' not found`);
     }
 
