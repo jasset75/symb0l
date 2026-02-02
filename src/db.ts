@@ -34,7 +34,61 @@ export function initDb() {
             instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
             isin TEXT UNIQUE,
             name TEXT NOT NULL,
-            instrument_type TEXT NOT NULL
+            instrument_type TEXT NOT NULL,
+            profile_id INTEGER,
+            risk_level_id INTEGER,
+            asset_class_level_id INTEGER,
+            market_cap_id INTEGER,
+            sector_id INTEGER,
+            sub_industry_id INTEGER,
+            country_exposure_id INTEGER,
+            FOREIGN KEY (profile_id) REFERENCES profile(profile_id),
+            FOREIGN KEY (risk_level_id) REFERENCES risk_level(risk_level_id),
+            FOREIGN KEY (asset_class_level_id) REFERENCES asset_class_level(asset_class_level_id),
+            FOREIGN KEY (market_cap_id) REFERENCES market_cap(market_cap_id),
+            FOREIGN KEY (sector_id) REFERENCES sector(sector_id),
+            FOREIGN KEY (sub_industry_id) REFERENCES sub_industry(sub_industry_id),
+            FOREIGN KEY (country_exposure_id) REFERENCES country_exposure(country_exposure_id)
+        );
+
+        -- Metadata Tables
+        CREATE TABLE IF NOT EXISTS profile (
+            profile_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS risk_level (
+            risk_level_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            weight INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS asset_class_level (
+            asset_class_level_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS market_cap (
+            market_cap_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS sector (
+            sector_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS sub_industry (
+            sub_industry_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS country_exposure (
+            country_exposure_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE
         );
 
         -- Listing
