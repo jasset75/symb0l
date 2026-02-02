@@ -1,48 +1,108 @@
 @startuml DataModel
 skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
 
-entity "Country" as country {
-  *country_code : TEXT <<PK>>
-  --
-  *name : TEXT
+
+package "Core Domain" {
+  entity "Instrument" as instrument {
+    *instrument_id : INTEGER <<PK>>
+    --
+    isin : TEXT <<UQ, nullable>>
+    *name : TEXT
+    *instrument_type : TEXT
+    profile_id : INTEGER <<FK>>
+    risk_level_id : INTEGER <<FK>>
+    asset_class_level_id : INTEGER <<FK>>
+    market_cap_id : INTEGER <<FK>>
+    sector_id : INTEGER <<FK>>
+    sub_industry_id : INTEGER <<FK>>
+    country_exposure_id : INTEGER <<FK>>
+  }
+
+  entity "Listing" as listing {
+    *listing_id : INTEGER <<PK>>
+    --
+    *instrument_id : INTEGER <<FK>>
+    *market_id : INTEGER <<FK>>
+    *symbol_code : TEXT
+    currency_id : TEXT <<FK>>
+  }
+
+  entity "Market" as market {
+    *market_id : INTEGER <<PK>>
+    --
+    *mic_code : TEXT <<UQ>>
+    ticker_prefix : TEXT
+    *name : TEXT
+    title : TEXT
+    *country_code : TEXT <<FK>>
+    timezone : TEXT
+  }
+
+  entity "Country" as country {
+    *country_code : TEXT <<PK>>
+    --
+    *name : TEXT
+  }
+
+  entity "Currency" as currency {
+    *currency_id : TEXT <<PK>>
+    --
+    *name : TEXT
+    *code3 : TEXT
+    *code2 : TEXT
+    *currency_symbol : TEXT
+    *decimal_digits : INTEGER
+  }
 }
 
-entity "Market" as market {
-  *market_id : INTEGER <<PK>>
-  --
-  *mic_code : TEXT <<UQ>>
-  ticker_prefix : TEXT
-  *name : TEXT
-  title : TEXT
-  *country_code : TEXT <<FK>>
-  timezone : TEXT
-}
+package "Metadata Classifications" {
+  entity "Profile" as profile {
+    *profile_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+  }
 
-entity "Instrument" as instrument {
-  *instrument_id : INTEGER <<PK>>
-  --
-  isin : TEXT <<UQ, nullable>>
-  *name : TEXT
-  *instrument_type : TEXT
-}
+  entity "RiskLevel" as risk_level {
+    *risk_level_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+    *weight : INTEGER
+  }
 
-entity "Listing" as listing {
-  *listing_id : INTEGER <<PK>>
-  --
-  *instrument_id : INTEGER <<FK>>
-  *market_id : INTEGER <<FK>>
-  *symbol_code : TEXT
-  currency_id : TEXT <<FK>>
-}
+  entity "AssetClassLevel" as asset_class_level {
+    *asset_class_level_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+    description : TEXT
+  }
 
-entity "Currency" as currency {
-  *currency_id : TEXT <<PK>>
-  --
-  *name : TEXT
-  *code3 : TEXT
-  *code2 : TEXT
-  *currency_symbol : TEXT
-  *decimal_digits : INTEGER
+  entity "MarketCap" as market_cap {
+    *market_cap_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+  }
+
+  entity "Sector" as sector {
+    *sector_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+    description : TEXT
+  }
+
+  entity "SubIndustry" as sub_industry {
+    *sub_industry_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+    description : TEXT
+  }
+
+  entity "CountryExposure" as country_exposure {
+    *country_exposure_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+  }
 }
 
 entity "view_listings" as view_listings <<view>> {
@@ -59,11 +119,30 @@ entity "view_listings" as view_listings <<view>> {
   currency_symbol : TEXT
 }
 
-country ||..|{ market
-market ||..|{ listing
-instrument ||..|{ listing
-currency ||..|{ listing
+' Core Relationships - enforce vertical hierarchy
+country ||..d|{ market
+market ||..d|{ listing
+instrument ||..r|{ listing
+currency ||..u|{ listing
+
 listing ..> view_listings : projects
+
+' Metadata relationships - place below instrument
+instrument }o..d|| profile
+instrument }o..d|| risk_level
+instrument }o..d|| asset_class_level
+instrument }o..d|| market_cap
+instrument }o..d|| sector
+instrument }o..d|| sub_industry
+instrument }o..d|| country_exposure
+
+' Layout hints
+profile -[hidden]r- risk_level
+risk_level -[hidden]r- asset_class_level
+asset_class_level -[hidden]r- market_cap
+market_cap -[hidden]r- sector
+sector -[hidden]r- sub_industry
+sub_industry -[hidden]r- country_exposure
 
 note right of country
   ISO 3166-1 alpha-2

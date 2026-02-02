@@ -78,14 +78,49 @@ Trading venues identified by ISO 10383 Market Identifier Codes (MIC).
 
 #### Instrument
 
-Financial instruments with optional ISIN identification.
+Financial instruments with optional ISIN identification and metadata classifications.
 
-| Column            | Type         | Description                                                    |
-| ----------------- | ------------ | -------------------------------------------------------------- |
-| `instrument_id`   | INTEGER (PK) | Primary key                                                    |
-| `isin`            | TEXT (UQ)    | [ISIN](https://www.isin.org/) code (nullable for forex/crypto) |
-| `name`            | TEXT         | Full instrument name                                           |
-| `instrument_type` | TEXT         | Type (STOCK, ETF, BOND, FOREX, CRYPTO, etc.)                   |
+| Column                 | Type         | Description                                                    |
+| ---------------------- | ------------ | -------------------------------------------------------------- |
+| `instrument_id`        | INTEGER (PK) | Primary key                                                    |
+| `isin`                 | TEXT (UQ)    | [ISIN](https://www.isin.org/) code (nullable for forex/crypto) |
+| `name`                 | TEXT         | Full instrument name                                           |
+| `instrument_type`      | TEXT         | Type (STOCK, ETF, BOND, FOREX, CRYPTO, etc.)                   |
+| `profile_id`           | INTEGER (FK) | Investment profile (e.g., Cyclical, Defensive)                 |
+| `risk_level_id`        | INTEGER (FK) | Risk categorization                                            |
+| `asset_class_level_id` | INTEGER (FK) | Asset class maturity level (e.g., Mature, Growth)              |
+| `market_cap_id`        | INTEGER (FK) | Market capitalization category                                 |
+| `sector_id`            | INTEGER (FK) | Economic sector (GICS + Custom)                                |
+| `sub_industry_id`      | INTEGER (FK) | Specific industry sub-division                                 |
+| `country_exposure_id`  | INTEGER (FK) | Primary country of economic exposure                           |
+
+#### Metadata Tables
+
+Normalized tables for instrument classification, populated from master data sources.
+
+| Table               | Columns                                | Description                                                               |
+| ------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| `profile`           | `profile_id`, `name`                   | Investment behavior profile (Defensive, Cyclical, etc.)                   |
+| `risk_level`        | `risk_level_id`, `name`, `weight`      | Risk rating 1-10                                                          |
+| `asset_class_level` | `asset_class_level_id`, `name`, `desc` | Startup vs Mature vs Growth classifications                               |
+| `market_cap`        | `market_cap_id`, `name`                | Size categorization (Large Cap, Mid Cap, etc.)                            |
+| `sector`            | `sector_id`, `name`, `desc`            | Economic sectors (GICS-aligned with exceptions for ETFs, FX, Commodities) |
+| `sub_industry`      | `sub_industry_id`, `name`, `desc`      | Granular industry classification (GICS-aligned)                           |
+| `country_exposure`  | `country_exposure_id`, `name`          | Geographic region of primary revenue/operations                           |
+
+### GICS Alignment
+
+The `sector` and `sub_industry` classifications primarily follow the **Global Industry Classification Standard (GICS)** to ensure standard market encapsulation.
+
+**Exceptions:**
+
+To support a wider range of asset classes beyond equities, the following non-GICS sectors are included:
+
+- **Commodities**: For instruments providing exposure to physical goods (Gold, Oil, etc.).
+- **ETFs**: For diversified exchange-traded funds that may span multiple sectors or asset classes.
+- **FX**: For currency pairs and forex instruments.
+
+These exceptions allow the system to categorize instruments that do not fit into the traditional corporate industry structure.
 
 #### Listing
 
