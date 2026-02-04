@@ -566,4 +566,10 @@ export const listings: ListingData[] = [
     isin: "US98980G1022",
     currency_code: "USD",
   },
+  {
+    market_prefix: "NASDAQ",
+    symbol_code: "SLAB",
+    isin: "US8269191024",
+    currency_code: "USD",
+  },
 ];

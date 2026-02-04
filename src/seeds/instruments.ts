@@ -1261,4 +1261,17 @@ export const instruments: InstrumentData[] = [
     sub_industry_name: "Application Software",
     country_exposure_name: "Global",
   },
+  {
+    instrument_id: 97,
+    isin: "US8269191024",
+    name: "SILICON LABORATORIES INC",
+    instrument_type: "Common Stock",
+    profile_name: "Growth",
+    risk_level_name: "High",
+    asset_class_level_name: "Growth",
+    market_cap_name: "Mid Cap",
+    sector_name: "Information Technology",
+    sub_industry_name: "Semiconductors",
+    country_exposure_name: "US",
+  },
 ];
