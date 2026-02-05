@@ -1,6 +1,6 @@
-# Symb0l Ecosystem
+# `Symb0l` Ecosystem
 
-This repository is a monorepo containing the Symb0l financial instrument database and its associated services.
+This repository is a monorepo containing the `Symb0l` financial instrument database and its associated services.
 
 ## Workspace Structure
 
