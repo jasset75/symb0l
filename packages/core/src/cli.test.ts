@@ -13,7 +13,7 @@ describe("Application Entry Point", () => {
     // Import and run the module
     // Note: This will actually execute the code, so we need to be careful
     // For a more isolated test, we would refactor index.ts to export a main function
-    await import("./index.js");
+    await import("./cli.js");
 
     // Restore console.log
     console.log = originalLog;

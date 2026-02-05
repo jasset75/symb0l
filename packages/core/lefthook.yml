@@ -5,25 +5,26 @@ pre-commit:
   parallel: true
   commands:
     compile-diagrams:
-      run: pnpm --filter @symb0l/core compile-diagrams
+      run: export PATH=$HOME/.local/share/mise/shims:$PATH && pnpm run compile-diagrams
       stage_fixed: true
 
     lint-staged:
       glob: "*.{js,ts,mjs}"
       run: |
-        pnpm -r lint
+        pnpm exec eslint {staged_files} && \
+        pnpm exec prettier --check {staged_files}
 
     format-staged:
       glob: "*.{json,md,yml,yaml}"
-      run: pnpm -r format
+      run: pnpm exec prettier --check {staged_files}
 
     type-check:
-      glob: "**/*.{ts,tsx}"
-      run: pnpm -r build
+      glob: "*.{ts,tsx}"
+      run: pnpm exec tsc --noEmit
 
     # tests:
-    #   glob: "**/*.{ts,tsx}"
-    #   run: pnpm -r test
+    #   glob: "*.{ts,tsx}"
+    #   run: pnpm test
 
 pre-push:
   commands:

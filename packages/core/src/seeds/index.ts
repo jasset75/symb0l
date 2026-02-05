@@ -35,8 +35,14 @@ export function seedDatabase(): void {
   new SeederBuilder<(typeof markets)[number]>(db)
     .entity("markets")
     .sql(
-      `INSERT OR REPLACE INTO market (mic_code, ticker_prefix, name, title, country_code, timezone) 
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO market (mic_code, ticker_prefix, name, title, country_code, timezone) 
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(mic_code) DO UPDATE SET
+       ticker_prefix = excluded.ticker_prefix,
+       name = excluded.name,
+       title = excluded.title,
+       country_code = excluded.country_code,
+       timezone = excluded.timezone`
     )
     .data(markets)
     .mapToValues((market) => [
@@ -149,12 +155,23 @@ export function seedDatabase(): void {
   new SeederBuilder<SeedInstrument>(db)
     .entity("instruments")
     .sql(
-      `INSERT OR REPLACE INTO instrument (
+      `INSERT INTO instrument (
             instrument_id, isin, name, instrument_type,
             profile_id, risk_level_id, asset_class_level_id, market_cap_id,
             sector_id, sub_industry_id, country_exposure_id
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(instrument_id) DO UPDATE SET
+            isin = excluded.isin,
+            name = excluded.name,
+            instrument_type = excluded.instrument_type,
+            profile_id = excluded.profile_id,
+            risk_level_id = excluded.risk_level_id,
+            asset_class_level_id = excluded.asset_class_level_id,
+            market_cap_id = excluded.market_cap_id,
+            sector_id = excluded.sector_id,
+            sub_industry_id = excluded.sub_industry_id,
+            country_exposure_id = excluded.country_exposure_id`
     )
     .data(instruments)
     // Resolvers for Metadata

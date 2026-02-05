@@ -691,7 +691,7 @@ export const instruments: InstrumentData[] = [
   },
   {
     instrument_id: 53,
-    isin: "US98980G1022",
+    isin: "US5949181045",
     name: "MICROSOFT CORP",
     instrument_type: "Common Stock",
     profile_name: "Growth",
@@ -821,7 +821,7 @@ export const instruments: InstrumentData[] = [
   },
   {
     instrument_id: 63,
-    isin: "US98980G1022",
+    isin: "US68389X1054",
     name: "ORACLE CORP",
     instrument_type: "Common Stock",
     profile_name: "Defensive",

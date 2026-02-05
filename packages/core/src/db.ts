@@ -32,7 +32,7 @@ export function initDb() {
         -- Instrument
         CREATE TABLE IF NOT EXISTS instrument (
             instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            isin TEXT UNIQUE,
+            isin TEXT,
             name TEXT NOT NULL,
             instrument_type TEXT NOT NULL,
             profile_id INTEGER,
