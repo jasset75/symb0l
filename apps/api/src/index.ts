@@ -1,14 +1,33 @@
-import { initDb } from "@symb0l/core";
-// import Fastify from 'fastify';
+import dotenv from "dotenv";
+dotenv.config();
 
-console.log("Starting API Service...");
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import { quoteRoutes } from "./routes/quotes.js";
 
-try {
-  initDb();
-  console.log("Database initialized from Core.");
-} catch (err) {
-  console.error("Failed to init DB:", err);
-}
+const fastify = Fastify({
+  logger: true,
+});
 
-// TODO: Setup Fastify
-console.log("API setup pending...");
+await fastify.register(cors, {
+  origin: true, // Allow all origins for now
+});
+
+// Register routes
+await fastify.register(quoteRoutes, { prefix: "/quotes" });
+
+fastify.get("/", async (request, reply) => {
+  return { hello: "world", service: "Symb0l API" };
+});
+
+const start = async () => {
+  try {
+    const port = parseInt(process.env.PORT || "3000");
+    await fastify.listen({ port, host: "0.0.0.0" });
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();
