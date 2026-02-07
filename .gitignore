@@ -39,3 +39,6 @@ tmp
 
 # Tools
 src/tools/generate_static_seeds.ts
+
+# Worktrees
+.worktrees
