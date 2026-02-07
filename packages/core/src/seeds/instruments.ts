@@ -1274,4 +1274,17 @@ export const instruments: InstrumentData[] = [
     sub_industry_name: "Semiconductors",
     country_exposure_name: "US",
   },
+  {
+    instrument_id: 98,
+    isin: "US44916E1001",
+    name: "IPERIONX LTD",
+    instrument_type: "Common Stock",
+    profile_name: "Speculative",
+    risk_level_name: "High",
+    asset_class_level_name: "Growth",
+    market_cap_name: "Small Cap",
+    sector_name: "Materials",
+    sub_industry_name: "Diversified Metals & Mining",
+    country_exposure_name: "US",
+  },
 ];
