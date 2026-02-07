@@ -251,4 +251,10 @@ export const subIndustries = [
     name: "Uranium Exploration",
     description: "Companies involved in the exploration and mining of uranium",
   },
+  {
+    sub_industry_id: 47,
+    name: "Diversified Metals & Mining",
+    description:
+      "Companies engaged in the exploration and mining of diversified metals and minerals",
+  },
 ];
