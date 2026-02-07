@@ -118,7 +118,3 @@ Before each commit, the following checks run in parallel:
 ### Local Overrides
 
 Create a `lefthook-local.yml` file (gitignored) for local hook customizations.
-
-## GitHub Game
-
-![My GitHub Game](game.gif)
