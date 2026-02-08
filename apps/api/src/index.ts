@@ -44,12 +44,6 @@ await fastify.register(swagger, {
         description: "Local server",
       },
     ],
-    components: {
-      schemas: {
-        Quote: QuoteSchema,
-        Error: ErrorSchema,
-      },
-    },
   },
 });
 
