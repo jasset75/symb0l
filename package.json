@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "prepare": "lefthook install",
-    "dev": "pnpm --filter @symb0l/core dev",
+    "list": "pnpm -r list --depth -1",
+    "core:dev": "pnpm --filter @symb0l/core dev",
+    "api:dev": "pnpm --filter symb0l-api dev",
     "test": "pnpm -r test",
     "test:integration": "pnpm -r test:integration",
     "build": "pnpm -r build",
