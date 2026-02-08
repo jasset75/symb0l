@@ -12,15 +12,46 @@ export interface SemanticVersion {
 }
 
 /**
+ * Deprecation information for a version
+ */
+export interface DeprecatedVersionInfo {
+  sunset: string; // ISO date string
+}
+
+/**
+ * API version configuration from api-version.json
+ */
+export interface ApiVersionConfig {
+  stable: string;
+  aliases: Record<string, string>;
+  supported: string[];
+  deprecated: Record<string, DeprecatedVersionInfo>;
+  sunsetted: string[];
+}
+
+/**
+ * Version status enum
+ */
+export enum VersionStatus {
+  STABLE = "stable",
+  SUPPORTED = "supported",
+  DEPRECATED = "deprecated",
+  SUNSETTED = "sunsetted",
+  UNKNOWN = "unknown",
+}
+
+/**
  * Version configuration for API versioning
  */
 export interface VersionConfig {
-  /** Current version from package.json */
-  current: SemanticVersion;
-  /** Map of major version aliases to specific versions */
-  majorAliases: Map<string, string>;
-  /** Default version for unversioned endpoints */
-  defaultVersion: string;
+  /** API version configuration from api-version.json */
+  apiVersions: ApiVersionConfig;
+  /** Current stable version */
+  stableVersion: SemanticVersion;
+  /** All supported versions (parsed) */
+  supportedVersions: SemanticVersion[];
+  /** All deprecated versions (parsed) */
+  deprecatedVersions: Map<string, DeprecatedVersionInfo>;
 }
 
 /**
@@ -43,65 +74,198 @@ export function parseVersion(versionString: string): SemanticVersion {
 }
 
 /**
- * Load version from package.json
+ * Load API version configuration from api-version.json
  */
-function loadPackageVersion(): string {
-  const packageJson = JSON.parse(
-    readFileSync(join(process.cwd(), "package.json"), "utf-8"),
-  );
-  return packageJson.version;
+export function loadApiVersionConfig(): ApiVersionConfig {
+  const configPath = join(process.cwd(), "api-version.json");
+  const configJson = readFileSync(configPath, "utf-8");
+  const config = JSON.parse(configJson) as ApiVersionConfig;
+
+  // Validate required fields
+  if (!config.stable) {
+    throw new Error("api-version.json must have a 'stable' field");
+  }
+  if (!config.aliases || typeof config.aliases !== "object") {
+    throw new Error("api-version.json must have an 'aliases' object");
+  }
+  if (!Array.isArray(config.supported)) {
+    throw new Error("api-version.json must have a 'supported' array");
+  }
+  if (!config.deprecated || typeof config.deprecated !== "object") {
+    throw new Error("api-version.json must have a 'deprecated' object");
+  }
+  if (!Array.isArray(config.sunsetted)) {
+    throw new Error("api-version.json must have a 'sunsetted' array");
+  }
+
+  // Validate version lifecycle consistency
+  const deprecatedVersions = Object.keys(config.deprecated);
+  const sunsettedVersions = config.sunsetted;
+
+  // Stable version cannot be sunsetted
+  if (sunsettedVersions.includes(config.stable)) {
+    throw new Error(
+      `Invalid configuration: stable version '${config.stable}' cannot be in sunsetted array`,
+    );
+  }
+
+  // Stable version cannot be deprecated
+  if (deprecatedVersions.includes(config.stable)) {
+    throw new Error(
+      `Invalid configuration: stable version '${config.stable}' cannot be in deprecated object`,
+    );
+  }
+
+  // Sunsetted versions cannot be in supported
+  for (const version of sunsettedVersions) {
+    if (config.supported.includes(version)) {
+      throw new Error(
+        `Invalid configuration: version '${version}' cannot be both sunsetted and supported`,
+      );
+    }
+  }
+
+  // Sunsetted versions cannot be in deprecated
+  for (const version of sunsettedVersions) {
+    if (deprecatedVersions.includes(version)) {
+      throw new Error(
+        `Invalid configuration: version '${version}' cannot be both sunsetted and deprecated`,
+      );
+    }
+  }
+
+  // Deprecated versions should not be in supported (warning in logs, not error)
+  // This is allowed but unusual - a version can be supported but marked for deprecation
+
+  return config;
 }
 
 /**
- * Create version configuration
+ * Create version configuration from api-version.json
  *
  * This is the single source of truth for API versioning.
- *
- * To update version mappings:
- * 1. Update package.json version
- * 2. Update majorAliases map to point to new version
- * 3. Optionally update defaultVersion
  */
 export function createVersionConfig(): VersionConfig {
-  const currentVersion = loadPackageVersion();
-  const parsed = parseVersion(currentVersion);
+  const apiVersions = loadApiVersionConfig();
 
-  // Map major versions to specific releases
-  // Update these mappings when releasing new minor/patch versions
-  const majorAliases = new Map<string, string>([
-    // v0 always points to latest 0.x.x release
-    ["v0", currentVersion],
-
-    // Future major versions can be added here:
-    // ['v1', '1.2.3'],
-    // ['v2', '2.0.0'],
-  ]);
+  const stableVersion = parseVersion(apiVersions.stable);
+  const supportedVersions = apiVersions.supported.map(parseVersion);
+  const deprecatedVersions = new Map(Object.entries(apiVersions.deprecated));
 
   return {
-    current: parsed,
-    majorAliases,
-    // Default version for unversioned endpoints (e.g., /quotes/:symbol)
-    // This should typically point to the latest stable major version
-    defaultVersion: `v${parsed.major}`,
+    apiVersions,
+    stableVersion,
+    supportedVersions,
+    deprecatedVersions,
   };
 }
 
 /**
- * Get all version prefixes that should be registered
- * Returns: [exact version, major alias, default (empty string)]
+ * Resolve a version string to its actual version
  *
- * Example for version 0.1.0:
- * - '/v0.1.0' (exact)
- * - '/v0' (major alias)
- * - '' (default, no prefix)
+ * @param versionString - Version string from URL (e.g., 'v1', 'v1.2.0', or empty for default)
+ * @param config - Version configuration
+ * @returns Resolved version string (e.g., '1.2.0')
+ */
+export function resolveVersion(
+  versionString: string,
+  config: VersionConfig,
+): string {
+  // Default (empty) -> stable version
+  if (!versionString || versionString === "") {
+    return config.stableVersion.full;
+  }
+
+  // Remove 'v' prefix if present
+  const normalized = versionString.startsWith("v")
+    ? versionString
+    : `v${versionString}`;
+
+  // Check if it's an alias (e.g., 'v1')
+  if (config.apiVersions.aliases[normalized]) {
+    return config.apiVersions.aliases[normalized];
+  }
+
+  // Check if it's an exact version (e.g., 'v1.2.0')
+  const exactVersion = normalized.substring(1); // Remove 'v'
+  if (
+    config.apiVersions.supported.includes(exactVersion) ||
+    config.apiVersions.deprecated[exactVersion]
+  ) {
+    return exactVersion;
+  }
+
+  // Unknown version - return as-is and let caller handle
+  return exactVersion;
+}
+
+/**
+ * Get the status of a version
+ *
+ * @param version - Version string (e.g., '1.2.0')
+ * @param config - Version configuration
+ * @returns Version status
+ */
+export function getVersionStatus(
+  version: string,
+  config: VersionConfig,
+): VersionStatus {
+  if (version === config.stableVersion.full) {
+    return VersionStatus.STABLE;
+  }
+
+  if (config.apiVersions.sunsetted.includes(version)) {
+    return VersionStatus.SUNSETTED;
+  }
+
+  if (config.apiVersions.deprecated[version]) {
+    return VersionStatus.DEPRECATED;
+  }
+
+  if (config.apiVersions.supported.includes(version)) {
+    return VersionStatus.SUPPORTED;
+  }
+
+  return VersionStatus.UNKNOWN;
+}
+
+/**
+ * Get all version prefixes that should be registered
+ * Returns all supported and deprecated versions, plus aliases
+ *
+ * Example:
+ * - 'v0.1.0' (exact supported)
+ * - 'v1.0.0' (exact deprecated)
+ * - 'v0' (alias)
+ * - '' (default, resolves to stable)
  */
 export function getVersionPrefixes(config: VersionConfig): string[] {
-  const exactVersion = `v${config.current.full}`;
-  const majorVersion = `v${config.current.major}`;
+  const prefixes: string[] = [];
 
-  return [
-    exactVersion, // e.g., 'v0.1.0'
-    majorVersion, // e.g., 'v0'
-    "", // default (no version prefix)
-  ];
+  // Add all supported versions
+  for (const version of config.apiVersions.supported) {
+    prefixes.push(`v${version}`);
+  }
+
+  // Add all deprecated versions
+  for (const version of Object.keys(config.apiVersions.deprecated)) {
+    prefixes.push(`v${version}`);
+  }
+
+  // Add all sunsetted versions
+  for (const version of config.apiVersions.sunsetted) {
+    prefixes.push(`v${version}`);
+  }
+
+  // Add all aliases
+  for (const alias of Object.keys(config.apiVersions.aliases)) {
+    if (!prefixes.includes(alias)) {
+      prefixes.push(alias);
+    }
+  }
+
+  // Add default (empty string)
+  prefixes.push("");
+
+  return prefixes;
 }

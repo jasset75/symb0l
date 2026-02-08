@@ -10,6 +10,8 @@ import { ErrorSchema, QuoteSchema } from "./schemas/common.js";
 import quoteServicePlugin from "./plugins/quote-service-plugin.js";
 import versionResolverPlugin from "./plugins/version-resolver.plugin.js";
 
+import versionHeadersPlugin from "./plugins/version-headers.plugin.js";
+
 const fastify = Fastify({
   logger: true,
 });
@@ -25,6 +27,9 @@ await fastify.register(cors, {
 // Register version resolver plugin first
 await fastify.register(versionResolverPlugin);
 
+// Register version headers plugin (depends on version resolver)
+await fastify.register(versionHeadersPlugin);
+
 // Register Swagger
 // @ts-ignore
 await fastify.register(swagger, {
@@ -32,7 +37,7 @@ await fastify.register(swagger, {
     info: {
       title: "Symb0l API",
       description: "API for Symb0l",
-      version: fastify.versionConfig.current.full,
+      version: fastify.versionConfig.stableVersion.full,
     },
     servers: [
       {
@@ -80,8 +85,10 @@ fastify.get("/health", async (request, reply) => {
   return {
     status: "ok",
     service: "Symb0l API",
-    version: fastify.versionConfig.current.full,
-    availableVersions: fastify.getVersionPrefixes().filter((v) => v !== ""),
+    version: fastify.versionConfig.stableVersion.full,
+    stableVersion: fastify.versionConfig.stableVersion.full,
+    supportedVersions: fastify.versionConfig.apiVersions.supported,
+    deprecatedVersions: fastify.versionConfig.apiVersions.deprecated,
     timestamp: new Date().toISOString(),
   };
 });

@@ -58,7 +58,7 @@ describe("Quote Routes - Version Integration", () => {
 
   describe("Version Access Patterns", () => {
     it("should respond on exact version endpoint", async () => {
-      const version = app.versionConfig.current.full;
+      const version = app.versionConfig.stableVersion.full;
       const response = await app.inject({
         method: "GET",
         url: `/v${version}/quotes/AAPL`,
@@ -70,7 +70,7 @@ describe("Quote Routes - Version Integration", () => {
     });
 
     it("should respond on major version endpoint", async () => {
-      const majorVersion = app.versionConfig.current.major;
+      const majorVersion = app.versionConfig.stableVersion.major;
       const response = await app.inject({
         method: "GET",
         url: `/v${majorVersion}/quotes/AAPL`,
@@ -93,8 +93,8 @@ describe("Quote Routes - Version Integration", () => {
     });
 
     it("should return identical responses across all version patterns", async () => {
-      const version = app.versionConfig.current.full;
-      const majorVersion = app.versionConfig.current.major;
+      const version = app.versionConfig.stableVersion.full;
+      const majorVersion = app.versionConfig.stableVersion.major;
 
       const [exactResponse, majorResponse, defaultResponse] = await Promise.all(
         [
@@ -121,8 +121,8 @@ describe("Quote Routes - Version Integration", () => {
 
   describe("Error Handling Across Versions", () => {
     it("should return 404 for invalid symbol on all endpoints", async () => {
-      const version = app.versionConfig.current.full;
-      const majorVersion = app.versionConfig.current.major;
+      const version = app.versionConfig.stableVersion.full;
+      const majorVersion = app.versionConfig.stableVersion.major;
 
       const [exactResponse, majorResponse, defaultResponse] = await Promise.all(
         [

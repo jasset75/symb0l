@@ -34,9 +34,10 @@ const versionResolverPlugin: FastifyPluginAsync = async (fastify) => {
   // Log version information on startup
   fastify.log.info(
     {
-      version: config.current.full,
-      majorAliases: Array.from(config.majorAliases.entries()),
-      defaultVersion: config.defaultVersion,
+      stableVersion: config.stableVersion.full,
+      supportedVersions: config.apiVersions.supported,
+      deprecatedVersions: Object.keys(config.apiVersions.deprecated),
+      aliases: config.apiVersions.aliases,
     },
     "API version configuration loaded",
   );
