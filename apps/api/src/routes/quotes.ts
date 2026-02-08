@@ -1,6 +1,4 @@
 import { FastifyInstance } from "fastify";
-import { db } from "@symb0l/core";
-import { ErrorSchema, QuoteSchema } from "../schemas/common.js";
 
 export async function quoteRoutes(fastify: FastifyInstance) {
   fastify.get(
