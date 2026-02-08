@@ -98,44 +98,65 @@ export function loadApiVersionConfig(): ApiVersionConfig {
     throw new Error("api-version.json must have a 'sunsetted' array");
   }
 
-  // Validate version lifecycle consistency
-  const deprecatedVersions = Object.keys(config.deprecated);
-  const sunsettedVersions = config.sunsetted;
+  // Validate stable version exists
+  if (!config.stable) {
+    throw new Error("Stable version must be defined in api-version.json");
+  }
 
-  // Stable version cannot be sunsetted
-  if (sunsettedVersions.includes(config.stable)) {
+  // Validate stable is not sunsetted
+  if (config.sunsetted.includes(config.stable)) {
     throw new Error(
-      `Invalid configuration: stable version '${config.stable}' cannot be in sunsetted array`,
+      `Stable version ${config.stable} cannot be in sunsetted list`,
     );
   }
 
-  // Stable version cannot be deprecated
-  if (deprecatedVersions.includes(config.stable)) {
+  // Validate stable is not deprecated
+  if (Object.keys(config.deprecated).includes(config.stable)) {
     throw new Error(
-      `Invalid configuration: stable version '${config.stable}' cannot be in deprecated object`,
+      `Stable version ${config.stable} cannot be in deprecated list`,
     );
   }
 
-  // Sunsetted versions cannot be in supported
-  for (const version of sunsettedVersions) {
+  // Validate no version is both sunsetted and supported
+  for (const version of config.sunsetted) {
     if (config.supported.includes(version)) {
       throw new Error(
-        `Invalid configuration: version '${version}' cannot be both sunsetted and supported`,
+        `Version ${version} cannot be both sunsetted and supported`,
       );
     }
   }
 
-  // Sunsetted versions cannot be in deprecated
-  for (const version of sunsettedVersions) {
-    if (deprecatedVersions.includes(version)) {
+  // Validate no version is both sunsetted and deprecated
+  for (const version of config.sunsetted) {
+    if (Object.keys(config.deprecated).includes(version)) {
       throw new Error(
-        `Invalid configuration: version '${version}' cannot be both sunsetted and deprecated`,
+        `Version ${version} cannot be both sunsetted and deprecated`,
       );
     }
   }
 
-  // Deprecated versions should not be in supported (warning in logs, not error)
-  // This is allowed but unusual - a version can be supported but marked for deprecation
+  // Validate no version appears in multiple active categories
+  // (supported and deprecated is OK - that's the deprecation flow)
+  // But we need to ensure each version appears only once in the final list
+  const allVersions = new Set<string>();
+  const duplicates: string[] = [];
+
+  // Check supported versions
+  for (const version of config.supported) {
+    if (allVersions.has(version)) {
+      duplicates.push(version);
+    }
+    allVersions.add(version);
+  }
+
+  // Note: deprecated versions can overlap with supported (that's the deprecation flow)
+  // So we don't check for duplicates between supported and deprecated
+
+  if (duplicates.length > 0) {
+    throw new Error(
+      `Duplicate versions found in supported list: ${duplicates.join(", ")}`,
+    );
+  }
 
   return config;
 }
@@ -243,18 +264,26 @@ export function getVersionPrefixes(config: VersionConfig): string[] {
   const prefixes: string[] = [];
 
   // Add all supported versions
+  // Note: Deprecated versions may overlap with supported (deprecation flow)
+  // So we track what we've added to avoid duplicates
   for (const version of config.apiVersions.supported) {
     prefixes.push(`v${version}`);
   }
 
-  // Add all deprecated versions
+  // Add deprecated versions that aren't already in supported
   for (const version of Object.keys(config.apiVersions.deprecated)) {
-    prefixes.push(`v${version}`);
+    const prefix = `v${version}`;
+    if (!prefixes.includes(prefix)) {
+      prefixes.push(prefix);
+    }
   }
 
-  // Add all sunsetted versions
+  // Add sunsetted versions that aren't already added
   for (const version of config.apiVersions.sunsetted) {
-    prefixes.push(`v${version}`);
+    const prefix = `v${version}`;
+    if (!prefixes.includes(prefix)) {
+      prefixes.push(prefix);
+    }
   }
 
   // Add all aliases

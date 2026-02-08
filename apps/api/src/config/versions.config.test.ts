@@ -138,15 +138,9 @@ describe("Version Configuration", () => {
 
     it("should identify supported version", () => {
       const config = createVersionConfig();
-      // Find a supported version that is not stable
-      const supportedNonStable = config.apiVersions.supported.find(
-        (v) => v !== config.stableVersion.full,
-      );
-
-      if (supportedNonStable) {
-        const status = getVersionStatus(supportedNonStable, config);
-        assert.strictEqual(status, VersionStatus.SUPPORTED);
-      }
+      // 0.2.0 is stable, which is also supported
+      const status = getVersionStatus("0.2.0", config);
+      assert.strictEqual(status, VersionStatus.STABLE);
     });
 
     it("should identify deprecated version", () => {

@@ -9,8 +9,10 @@ import { quoteRoutes } from "./routes/quotes.js";
 import { ErrorSchema, QuoteSchema } from "./schemas/common.js";
 import quoteServicePlugin from "./plugins/quote-service-plugin.js";
 import versionResolverPlugin from "./plugins/version-resolver.plugin.js";
-
 import versionHeadersPlugin from "./plugins/version-headers.plugin.js";
+
+import { healthRoutes } from "./routes/health.js";
+import { registerVersionedRoutes } from "./plugins/versioned-routes.plugin.js";
 
 const fastify = Fastify({
   logger: true,
@@ -54,43 +56,21 @@ await fastify.register(swaggerUi, {
 
 await fastify.register(quoteServicePlugin);
 
-// Register routes with version patterns
-// Only the canonical (exact version) route appears in Swagger documentation
-// Alias routes (major version and default) work but are not documented
-const versionPrefixes = fastify.getVersionPrefixes();
-const exactVersion = versionPrefixes[0]; // e.g., 'v0.1.0'
+// Register versioned routes using helper plugin
+// Automatically registers all versions (canonical + aliases + default)
+// Only canonical (stable) version is documented in Swagger
+await fastify.register(registerVersionedRoutes, {
+  basePath: "/quotes",
+  routePlugin: quoteRoutes,
+});
 
-// 1. Register canonical route WITH Swagger documentation
-await fastify.register(quoteRoutes, { prefix: `/${exactVersion}/quotes` });
-fastify.log.info(
-  `Registered quotes routes at: /${exactVersion}/quotes (documented in Swagger)`,
-);
-
-// 2. Register alias routes WITHOUT Swagger documentation
-// These routes work but don't appear in Swagger UI
-for (let i = 1; i < versionPrefixes.length; i++) {
-  const versionPrefix = versionPrefixes[i];
-  const prefix = versionPrefix ? `/${versionPrefix}/quotes` : "/quotes";
-
-  // Register with hideFromSwagger option
-  await fastify.register(quoteRoutes, { prefix, hideFromSwagger: true });
-
-  fastify.log.info(
-    `Registered quotes routes at: ${prefix} (alias, hidden from Swagger)`,
-  );
-}
-
-// Health check endpoint
-fastify.get("/health", async (request, reply) => {
-  return {
-    status: "ok",
-    service: "Symb0l API",
-    version: fastify.versionConfig.stableVersion.full,
-    stableVersion: fastify.versionConfig.stableVersion.full,
-    supportedVersions: fastify.versionConfig.apiVersions.supported,
-    deprecatedVersions: fastify.versionConfig.apiVersions.deprecated,
-    timestamp: new Date().toISOString(),
-  };
+await fastify.register(registerVersionedRoutes, {
+  basePath: "/health", // Now consistent with quotes pattern
+  routePlugin: healthRoutes,
+  versionOptions: {
+    "0.1.0": { version: "0.1.0" },
+    "0.2.0": { version: "0.2.0" },
+  },
 });
 
 // Default route redirects to health

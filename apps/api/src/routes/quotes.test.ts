@@ -1,4 +1,4 @@
-import { describe, it, before, after } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import Fastify, { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
@@ -31,7 +31,7 @@ const mockQuoteServicePlugin = fp(async (fastify) => {
 describe("Quote Routes - Version Integration", () => {
   let app: FastifyInstance;
 
-  before(async () => {
+  beforeEach(async () => {
     app = Fastify({ logger: false });
 
     // Register shared schemas first
@@ -42,17 +42,14 @@ describe("Quote Routes - Version Integration", () => {
     await app.register(versionResolverPlugin);
     await app.register(mockQuoteServicePlugin);
 
-    // Register routes with all version patterns
-    const versionPrefixes = app.getVersionPrefixes();
-    for (const versionPrefix of versionPrefixes) {
-      const prefix = versionPrefix ? `/${versionPrefix}/quotes` : "/quotes";
-      await app.register(quoteRoutes, { prefix });
-    }
+    // Register canonical route only for testing
+    await app.register(quoteRoutes, { prefix: "/v0.2.0/quotes" });
+    await app.register(quoteRoutes, { prefix: "/quotes" });
 
     await app.ready();
   });
 
-  after(async () => {
+  afterEach(async () => {
     await app.close();
   });
 

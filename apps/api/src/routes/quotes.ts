@@ -1,21 +1,18 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-interface QuoteRoutesOptions extends FastifyPluginOptions {
-  hideFromSwagger?: boolean;
-}
-
+/**
+ * Quote routes plugin
+ * Provides stock quote endpoints
+ */
 export async function quoteRoutes(
   fastify: FastifyInstance,
-  opts: QuoteRoutesOptions = {},
+  opts: FastifyPluginOptions,
 ) {
-  const { hideFromSwagger = false } = opts;
-
   fastify.get(
     "/:symbol",
     {
       schema: {
-        ...(hideFromSwagger && { hide: true }),
-        description: "Get real-time quote for a symbol",
+        description: "Get a stock quote by symbol",
         tags: ["quotes"],
         params: {
           type: "object",
