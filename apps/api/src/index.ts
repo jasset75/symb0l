@@ -75,13 +75,20 @@ for (let i = 1; i < versionPrefixes.length; i++) {
   );
 }
 
-fastify.get("/", async (request, reply) => {
+// Health check endpoint
+fastify.get("/health", async (request, reply) => {
   return {
-    hello: "world",
+    status: "ok",
     service: "Symb0l API",
     version: fastify.versionConfig.current.full,
     availableVersions: fastify.getVersionPrefixes().filter((v) => v !== ""),
+    timestamp: new Date().toISOString(),
   };
+});
+
+// Default route redirects to health
+fastify.get("/", async (request, reply) => {
+  return reply.redirect("/health");
 });
 
 const start = async () => {
