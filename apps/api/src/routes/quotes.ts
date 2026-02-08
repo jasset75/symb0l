@@ -1,10 +1,20 @@
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-export async function quoteRoutes(fastify: FastifyInstance) {
+interface QuoteRoutesOptions extends FastifyPluginOptions {
+  hideFromSwagger?: boolean;
+}
+
+export async function quoteRoutes(
+  fastify: FastifyInstance,
+  opts: QuoteRoutesOptions = {},
+) {
+  const { hideFromSwagger = false } = opts;
+
   fastify.get(
     "/:symbol",
     {
       schema: {
+        ...(hideFromSwagger && { hide: true }),
         description: "Get real-time quote for a symbol",
         tags: ["quotes"],
         params: {

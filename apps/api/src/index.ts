@@ -1,9 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { readFileSync } from "fs";
-import { join } from "path";
-
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
@@ -11,11 +8,7 @@ import swaggerUi from "@fastify/swagger-ui";
 import { quoteRoutes } from "./routes/quotes.js";
 import { ErrorSchema, QuoteSchema } from "./schemas/common.js";
 import quoteServicePlugin from "./plugins/quote-service-plugin.js";
-
-const packageJson = JSON.parse(
-  readFileSync(join(process.cwd(), "package.json"), "utf-8"),
-);
-const version = packageJson.version;
+import versionResolverPlugin from "./plugins/version-resolver.plugin.js";
 
 const fastify = Fastify({
   logger: true,
@@ -29,6 +22,9 @@ await fastify.register(cors, {
   origin: true, // Allow all origins for now
 });
 
+// Register version resolver plugin first
+await fastify.register(versionResolverPlugin);
+
 // Register Swagger
 // @ts-ignore
 await fastify.register(swagger, {
@@ -36,7 +32,7 @@ await fastify.register(swagger, {
     info: {
       title: "Symb0l API",
       description: "API for Symb0l",
-      version: version,
+      version: fastify.versionConfig.current.full,
     },
     servers: [
       {
@@ -53,11 +49,39 @@ await fastify.register(swaggerUi, {
 
 await fastify.register(quoteServicePlugin);
 
-// Register routes
-await fastify.register(quoteRoutes, { prefix: `/v${version}/quotes` });
+// Register routes with version patterns
+// Only the canonical (exact version) route appears in Swagger documentation
+// Alias routes (major version and default) work but are not documented
+const versionPrefixes = fastify.getVersionPrefixes();
+const exactVersion = versionPrefixes[0]; // e.g., 'v0.1.0'
+
+// 1. Register canonical route WITH Swagger documentation
+await fastify.register(quoteRoutes, { prefix: `/${exactVersion}/quotes` });
+fastify.log.info(
+  `Registered quotes routes at: /${exactVersion}/quotes (documented in Swagger)`,
+);
+
+// 2. Register alias routes WITHOUT Swagger documentation
+// These routes work but don't appear in Swagger UI
+for (let i = 1; i < versionPrefixes.length; i++) {
+  const versionPrefix = versionPrefixes[i];
+  const prefix = versionPrefix ? `/${versionPrefix}/quotes` : "/quotes";
+
+  // Register with hideFromSwagger option
+  await fastify.register(quoteRoutes, { prefix, hideFromSwagger: true });
+
+  fastify.log.info(
+    `Registered quotes routes at: ${prefix} (alias, hidden from Swagger)`,
+  );
+}
 
 fastify.get("/", async (request, reply) => {
-  return { hello: "world", service: "Symb0l API", version: version };
+  return {
+    hello: "world",
+    service: "Symb0l API",
+    version: fastify.versionConfig.current.full,
+    availableVersions: fastify.getVersionPrefixes().filter((v) => v !== ""),
+  };
 });
 
 const start = async () => {
