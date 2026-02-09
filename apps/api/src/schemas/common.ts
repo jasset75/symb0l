@@ -24,3 +24,34 @@ export const QuoteSchema = {
   },
   required: ["symbol", "price", "currency", "timestamp"],
 };
+
+export const StandardErrorResponses = {
+  400: {
+    description: "Bad Request",
+    $ref: "Error#",
+  },
+  401: {
+    description: "Unauthorized",
+    $ref: "Error#",
+  },
+  403: {
+    description: "Forbidden",
+    $ref: "Error#",
+  },
+  404: {
+    description: "Not Found",
+    $ref: "Error#",
+  },
+  500: {
+    description: "Internal Server Error",
+    $ref: "Error#",
+  },
+  502: {
+    description: "Bad Gateway",
+    $ref: "Error#",
+  },
+  503: {
+    description: "Service Unavailable",
+    $ref: "Error#",
+  },
+};

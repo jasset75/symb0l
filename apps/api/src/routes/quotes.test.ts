@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import Fastify, { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
+import sensible from "@fastify/sensible";
 import { quoteRoutes } from "./quotes.js";
 import { ErrorSchema, QuoteSchema } from "../schemas/common.js";
 import versionResolverPlugin from "../plugins/version-resolver.plugin.js";
@@ -39,11 +40,13 @@ describe("Quote Routes - Version Integration", () => {
     app.addSchema(QuoteSchema);
 
     // Register plugins
+    await app.register(sensible);
     await app.register(versionResolverPlugin);
     await app.register(mockQuoteServicePlugin);
 
     // Register canonical route only for testing
     await app.register(quoteRoutes, { prefix: "/v0.2.0/quotes" });
+    await app.register(quoteRoutes, { prefix: "/v0/quotes" });
     await app.register(quoteRoutes, { prefix: "/quotes" });
 
     await app.ready();

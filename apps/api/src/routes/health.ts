@@ -28,6 +28,17 @@ export async function healthRoutes(
             type: "object",
             properties: {
               status: { type: "string" },
+              ...(version === "0.1.0" && {
+                service: { type: "string" },
+                version: { type: "string" },
+                stableVersion: { type: "string" },
+                supportedVersions: { type: "array", items: { type: "string" } },
+                deprecatedVersions: {
+                  type: "object",
+                  additionalProperties: { type: "string" },
+                },
+                timestamp: { type: "string" },
+              }),
               ...(version === "0.2.0" && {
                 api: {
                   type: "object",

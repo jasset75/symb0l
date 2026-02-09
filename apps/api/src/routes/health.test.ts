@@ -19,7 +19,7 @@ describe("Health Endpoint Versions", () => {
   describe("v0.1.0 Health Endpoint", () => {
     beforeEach(async () => {
       await app.register(healthRoutes, {
-        prefix: "/v0.1.0",
+        prefix: "/v0.1.0/health",
         version: "0.1.0",
       });
     });
@@ -67,7 +67,7 @@ describe("Health Endpoint Versions", () => {
   describe("v0.2.0 Health Endpoint", () => {
     beforeEach(async () => {
       await app.register(healthRoutes, {
-        prefix: "/v0.2.0",
+        prefix: "/v0.2.0/health",
         version: "0.2.0",
       });
     });
@@ -128,11 +128,11 @@ describe("Health Endpoint Versions", () => {
   describe("Version Comparison", () => {
     beforeEach(async () => {
       await app.register(healthRoutes, {
-        prefix: "/v0.1.0",
+        prefix: "/v0.1.0/health",
         version: "0.1.0",
       });
       await app.register(healthRoutes, {
-        prefix: "/v0.2.0",
+        prefix: "/v0.2.0/health",
         version: "0.2.0",
       });
     });

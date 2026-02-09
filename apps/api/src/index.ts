@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
+import sensible from "@fastify/sensible";
 import { quoteRoutes } from "./routes/quotes.js";
 import { ErrorSchema, QuoteSchema } from "./schemas/common.js";
 import quoteServicePlugin from "./plugins/quote-service-plugin.js";
@@ -21,6 +22,8 @@ const fastify = Fastify({
 // Register shared schemas
 fastify.addSchema(ErrorSchema);
 fastify.addSchema(QuoteSchema);
+
+await fastify.register(sensible);
 
 await fastify.register(cors, {
   origin: true, // Allow all origins for now
