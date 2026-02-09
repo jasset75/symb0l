@@ -6,6 +6,7 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import sensible from "@fastify/sensible";
+import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import { quoteRoutes } from "./routes/quotes.js";
 import { ErrorSchema, QuoteSchema } from "./schemas/common.js";
 import quoteServicePlugin from "./plugins/quote-service-plugin.js";
@@ -17,7 +18,7 @@ import { registerVersionedRoutes } from "./plugins/versioned-routes.plugin.js";
 
 const fastify = Fastify({
   logger: true,
-});
+}).withTypeProvider<TypeBoxTypeProvider>();
 
 // Register shared schemas
 fastify.addSchema(ErrorSchema);

@@ -1,4 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
+import { Type } from "@sinclair/typebox";
 import {
   ErrorSchema,
   QuoteSchema,
@@ -13,35 +15,32 @@ export async function quoteRoutes(
   fastify: FastifyInstance,
   opts: FastifyPluginOptions,
 ) {
-  fastify.get(
+  const server = fastify.withTypeProvider<TypeBoxTypeProvider>();
+
+  server.get(
     "/:symbol",
     {
       schema: {
         description: "Get a stock quote by symbol",
         tags: ["quotes"],
-        params: {
-          type: "object",
-          properties: {
-            symbol: {
-              type: "string",
-              description: "Symbol ticker (e.g. AAPL)",
-              pattern: "^[A-Z0-9:.-]+$",
-              maxLength: 20,
-            },
-          },
-          required: ["symbol"],
-        },
+        params: Type.Object({
+          symbol: Type.String({
+            description: "Symbol ticker (e.g. AAPL)",
+            pattern: "^[A-Z0-9:.-]+$",
+            maxLength: 20,
+          }),
+        }),
         response: {
           200: {
             description: "Successful response",
-            $ref: "Quote#",
+            ...Type.Ref("Quote"),
           },
           ...StandardErrorResponses,
         },
       },
     },
     async (request, reply) => {
-      const { symbol } = request.params as { symbol: string };
+      const { symbol } = request.params;
 
       // Manual validation not strictly needed if schema validation is on,
       // but good to keep or relying purely on fastify schema

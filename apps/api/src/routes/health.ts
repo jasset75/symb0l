@@ -1,4 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
+import { Type } from "@sinclair/typebox";
 
 interface HealthRoutesOptions extends FastifyPluginOptions {
   version?: string; // e.g., "0.1.0" or "0.2.0"
@@ -13,60 +15,60 @@ export async function healthRoutes(
   opts: HealthRoutesOptions = {},
 ) {
   const { version } = opts;
-
-  // Get version config
+  const server = fastify.withTypeProvider<TypeBoxTypeProvider>();
   const versionConfig = fastify.versionConfig;
 
-  fastify.get(
-    "/", // basePath will provide "/health"
-    {
-      schema: {
-        description: "Health check endpoint",
-        tags: ["health"],
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              status: { type: "string" },
-              ...(version === "0.1.0" && {
-                service: { type: "string" },
-                version: { type: "string" },
-                stableVersion: { type: "string" },
-                supportedVersions: { type: "array", items: { type: "string" } },
-                deprecatedVersions: {
-                  type: "object",
-                  additionalProperties: { type: "string" },
-                },
-                timestamp: { type: "string" },
-              }),
-              ...(version === "0.2.0" && {
-                api: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    version: { type: "string" },
-                  },
-                },
-                versions: {
-                  type: "object",
-                  properties: {
-                    stable: { type: "string" },
-                    supported: { type: "array", items: { type: "string" } },
-                    deprecated: { type: "array", items: { type: "string" } },
-                    sunsetted: { type: "array", items: { type: "string" } },
-                  },
-                },
-                timestamp: { type: "string" },
-                uptime: { type: "number" },
-              }),
-            },
+  // Define schema properties
+  const commonProps = {
+    status: Type.String(),
+  };
+
+  const v1Props = {
+    service: Type.String(),
+    version: Type.String(),
+    stableVersion: Type.String(),
+    supportedVersions: Type.Array(Type.String()),
+    deprecatedVersions: Type.Record(
+      Type.String(),
+      Type.Object({
+        sunset: Type.Optional(Type.String()),
+      }),
+    ),
+    timestamp: Type.String(),
+  };
+
+  const v2Props = {
+    api: Type.Object({
+      name: Type.String(),
+      version: Type.String(),
+    }),
+    versions: Type.Object({
+      stable: Type.String(),
+      supported: Type.Array(Type.String()),
+      deprecated: Type.Array(Type.String()),
+      sunsetted: Type.Array(Type.String()),
+    }),
+    timestamp: Type.String(),
+    uptime: Type.Number(),
+  };
+
+  // V1 Implementation
+  if (version === "0.1.0") {
+    server.get(
+      "/",
+      {
+        schema: {
+          description: "Health check endpoint",
+          tags: ["health"],
+          response: {
+            200: Type.Object({
+              ...commonProps,
+              ...v1Props,
+            }),
           },
         },
       },
-    },
-    async (request, reply) => {
-      // v0.1.0 format: flat structure
-      if (version === "0.1.0") {
+      async (_request, _reply) => {
         return {
           status: "ok",
           service: "Symb0l API",
@@ -76,24 +78,66 @@ export async function healthRoutes(
           deprecatedVersions: versionConfig.apiVersions.deprecated,
           timestamp: new Date().toISOString(),
         };
-      }
+      },
+    );
+    return;
+  }
 
-      // v0.2.0+ format: nested structure with uptime
-      return {
-        status: "healthy",
-        api: {
-          name: "Symb0l API",
-          version: versionConfig.stableVersion.full,
+  // V2 Implementation
+  if (version === "0.2.0") {
+    server.get(
+      "/",
+      {
+        schema: {
+          description: "Health check endpoint",
+          tags: ["health"],
+          response: {
+            200: Type.Object({
+              ...commonProps,
+              ...v2Props,
+            }),
+          },
         },
-        versions: {
-          stable: versionConfig.stableVersion.full,
-          supported: versionConfig.apiVersions.supported,
-          deprecated: Object.keys(versionConfig.apiVersions.deprecated),
-          sunsetted: versionConfig.apiVersions.sunsetted,
+      },
+      async (_request, _reply) => {
+        return {
+          status: "healthy",
+          api: {
+            name: "Symb0l API",
+            version: versionConfig.stableVersion.full,
+          },
+          versions: {
+            stable: versionConfig.stableVersion.full,
+            supported: versionConfig.apiVersions.supported,
+            deprecated: Object.keys(versionConfig.apiVersions.deprecated),
+            sunsetted: versionConfig.apiVersions.sunsetted,
+          },
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+        };
+      },
+    );
+    return;
+  }
+
+  // Fallback for unconfigured versions
+  server.get(
+    "/",
+    {
+      schema: {
+        tags: ["health"],
+        response: {
+          200: Type.Object(
+            {
+              status: Type.String(),
+            },
+            { additionalProperties: true },
+          ),
         },
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-      };
+      },
+    },
+    async (_request, _reply) => {
+      return { status: "ok" };
     },
   );
 }
