@@ -2,6 +2,10 @@
 
 API Service for Symb0l ecosystem.
 
+## Documentation
+
+- **[Architecture Guide](./ARCHITECTURE.md)** - Modular structure and separation of concerns
+
 ## Usage
 
 ```bash
