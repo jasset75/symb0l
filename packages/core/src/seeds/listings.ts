@@ -572,4 +572,10 @@ export const listings: ListingData[] = [
     isin: "US8269191024",
     currency_code: "USD",
   },
+  {
+    market_prefix: "NASDAQ",
+    symbol_code: "IPX",
+    isin: "US44916E1001",
+    currency_code: "USD",
+  },
 ];

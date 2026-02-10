@@ -207,3 +207,51 @@ See the complete implementation:
 - **Seeding**: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts) (markets section)
 - **Tests**: [`src/seeds/markets.integration.test.ts`](file:///Users/juan/work/symb0l/src/seeds/markets.integration.test.ts)
 - **Unit Tests**: [`src/seeds/lib/SeederBuilder.test.ts`](file:///Users/juan/work/symb0l/src/seeds/lib/SeederBuilder.test.ts)
+
+---
+
+## 🌿 Branch & Worktree Workflow
+
+To keep the workspace clean and avoid switching branches in the main directory, we use **Git Worktrees** for feature development.
+
+### Branch Naming Convention
+
+- **Features**: `feature/<name>` (e.g., `feature/add-iperionx`)
+- **Fixes**: `fix/<name>`
+- **Chore**: `chore/<name>`
+
+### Workflow
+
+1. **Create a Worktree**:
+   Create a new worktree in the `.worktrees/` directory (which is gitignored).
+
+   ```bash
+   # Syntax: git worktree add -b <branch-name> .worktrees/<folder-name> <base-branch>
+   git worktree add -b feature/add-new-data .worktrees/feature-add-new-data main
+   ```
+
+2. **Switch Context**:
+   Open the worktree in your editor or navigate to it in the terminal.
+
+   ```bash
+   cd .worktrees/feature-add-new-data
+   ```
+
+3. **Develop & Commit**:
+   Make your changes, run tests, and commit as usual within the worktree.
+
+4. **Cleanup**:
+   Once the PR is merged, remove the worktree.
+
+   ```bash
+   git worktree remove .worktrees/feature-add-new-data
+   ```
+
+### Agent & Editor Workflow
+
+When using worktrees, treat each worktree as a **separate workspace**.
+
+- **IDE/Editor**: Open the worktree folder (e.g., `.worktrees/feature-add-new-data`) as a **separate window**.
+  - **Why?**: If you open the main folder, the IDE indexes both the main `node_modules` and the worktree's `node_modules`, causing duplicate symbol errors and slow performance.
+  - **Disk Usage**: `pnpm` uses a global content-addressable store, so the physical `node_modules` files in worktrees share disk space with the main project (hard links), minimizing overhead.
+- **AI Agents**: Point the agent to the worktree directory as the **workspace root**. This ensures the agent acts on the correct files and git context.
