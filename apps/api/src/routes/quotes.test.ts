@@ -3,7 +3,7 @@ import assert from "node:assert";
 import Fastify, { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
 import sensible from "@fastify/sensible";
-import { quoteRoutes } from "./quotes.js";
+import { quoteRoutes } from "../modules/quotes/index.js";
 import { ErrorSchema, QuoteSchema } from "../schemas/common.js";
 import versionResolverPlugin from "../plugins/version-resolver.plugin.js";
 
