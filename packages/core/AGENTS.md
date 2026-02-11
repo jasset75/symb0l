@@ -16,6 +16,7 @@ This file provides **LLM-first** context and operating rules for AI agents worki
   - `src/db.ts` → Database schema and connection.
   - `doc/diagrams/` → PlantUML source files (`.puml`).
   - `doc/images/` → Generated diagrams (`.svg`).
+  - `apps/api/` → API service ([Architecture Guide](../../apps/api/ARCHITECTURE.md)).
 
 ---
 
