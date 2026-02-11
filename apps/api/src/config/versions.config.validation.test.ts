@@ -1,53 +1,55 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
+import { Value } from "@sinclair/typebox/value";
 import {
-  loadApiVersionConfig,
-  createVersionConfig,
-} from "./versions.config.js";
+  API_VERSION_CONFIG,
+  ApiVersionConfigSchema,
+  schemas,
+} from "./api-version.config.js";
 
-describe("Version Configuration Validation", () => {
-  describe("Invalid Configurations", () => {
-    it("should throw if stable version is sunsetted", () => {
-      // This test would require mocking the file system
-      // For now, we document the expected behavior
-      // In practice, this would be caught when loading the config
-      assert.ok(true, "Validation prevents stable version in sunsetted array");
-    });
-
-    it("should throw if stable version is deprecated", () => {
+describe("API Version Configuration Validation", () => {
+  describe("TypeBox Schema Validation", () => {
+    it("should validate the current configuration", () => {
+      const isValid = Value.Check(ApiVersionConfigSchema, API_VERSION_CONFIG);
       assert.ok(
-        true,
-        "Validation prevents stable version in deprecated object",
+        isValid,
+        "Current configuration should be valid according to schema",
       );
     });
 
-    it("should throw if version is both sunsetted and supported", () => {
-      assert.ok(
-        true,
-        "Validation prevents version in both sunsetted and supported",
+    it("should reject invalid semantic version format", () => {
+      const invalidConfig = {
+        ...API_VERSION_CONFIG,
+        stable: "v1.0", // Invalid format (needs X.Y.Z)
+      };
+
+      const isValid = Value.Check(ApiVersionConfigSchema, invalidConfig);
+      assert.strictEqual(
+        isValid,
+        false,
+        "Should reject invalid semantic version",
       );
     });
 
-    it("should throw if version is both sunsetted and deprecated", () => {
+    it("should validate deprecated version info structure", () => {
+      const validInfo = { sunset: "2025-01-01T00:00:00Z" };
       assert.ok(
-        true,
-        "Validation prevents version in both sunsetted and deprecated",
+        Value.Check(schemas.DeprecatedVersionInfoSchema, validInfo),
+        "Should accept valid sunset date",
+      );
+
+      const invalidInfo = { sunset: "not-a-date" };
+      assert.strictEqual(
+        Value.Check(schemas.DeprecatedVersionInfoSchema, invalidInfo),
+        false,
+        "Should reject invalid date format",
       );
     });
   });
 
-  describe("Valid Configuration", () => {
-    it("should load current configuration without errors", () => {
-      // This will throw if validation fails
-      assert.doesNotThrow(() => {
-        loadApiVersionConfig();
-      });
-    });
-
-    it("should create version config without errors", () => {
-      assert.doesNotThrow(() => {
-        createVersionConfig();
-      });
-    });
-  });
+  // Note: The logic validation rules (e.g. "stable cannot be sunsetted")
+  // are implemented as runtime checks in api-version.config.ts and run on module load.
+  // Testing them would require isolation/mocking of the module loading process,
+  // which is complex. Since we have type safety and schema validation,
+  // we rely on the schema tests above and the runtime checks.
 });

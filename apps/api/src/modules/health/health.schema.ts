@@ -11,7 +11,7 @@ export const HealthV1Schema = Type.Object({
   service: Type.String(),
   version: Type.String(),
   stableVersion: Type.String(),
-  supportedVersions: Type.Array(Type.String()),
+  supportedVersions: Type.Readonly(Type.Array(Type.String())),
   deprecatedVersions: Type.Record(
     Type.String(),
     Type.Object({
@@ -32,9 +32,9 @@ export const HealthV2Schema = Type.Object({
   }),
   versions: Type.Object({
     stable: Type.String(),
-    supported: Type.Array(Type.String()),
-    deprecated: Type.Array(Type.String()),
-    sunsetted: Type.Array(Type.String()),
+    supported: Type.Readonly(Type.Array(Type.String())),
+    deprecated: Type.Readonly(Type.Array(Type.String())),
+    sunsetted: Type.Readonly(Type.Array(Type.String())),
   }),
   timestamp: Type.String(),
   uptime: Type.Number(),

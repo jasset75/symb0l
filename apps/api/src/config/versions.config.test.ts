@@ -1,13 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
 import {
-  parseVersion,
   createVersionConfig,
   getVersionPrefixes,
-  loadApiVersionConfig,
   resolveVersion,
   getVersionStatus,
   VersionStatus,
+  parseVersion,
 } from "./versions.config.js";
 
 describe("Version Configuration", () => {
@@ -40,25 +39,8 @@ describe("Version Configuration", () => {
     });
   });
 
-  describe("loadApiVersionConfig", () => {
-    it("should load config from api-version.json", () => {
-      const config = loadApiVersionConfig();
-
-      assert.ok(config.stable);
-      assert.ok(typeof config.aliases === "object");
-      assert.ok(Array.isArray(config.supported));
-      assert.ok(typeof config.deprecated === "object");
-      assert.ok(Array.isArray(config.sunsetted));
-    });
-
-    it("should have valid stable version", () => {
-      const config = loadApiVersionConfig();
-      assert.ok(config.stable.match(/^\d+\.\d+\.\d+$/));
-    });
-  });
-
   describe("createVersionConfig", () => {
-    it("should create config from api-version.json", () => {
+    it("should create config from API_VERSION_CONFIG", () => {
       const config = createVersionConfig();
 
       assert.ok(config.stableVersion);

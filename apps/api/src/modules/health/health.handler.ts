@@ -12,7 +12,7 @@ export async function handleHealthV1(
     service: "Symb0l API",
     version: versionConfig.stableVersion.full,
     stableVersion: versionConfig.stableVersion.full,
-    supportedVersions: versionConfig.apiVersions.supported,
+    supportedVersions: [...versionConfig.apiVersions.supported],
     deprecatedVersions: versionConfig.apiVersions.deprecated,
     timestamp: new Date().toISOString(),
   };
@@ -32,9 +32,9 @@ export async function handleHealthV2(
     },
     versions: {
       stable: versionConfig.stableVersion.full,
-      supported: versionConfig.apiVersions.supported,
+      supported: [...versionConfig.apiVersions.supported],
       deprecated: Object.keys(versionConfig.apiVersions.deprecated),
-      sunsetted: versionConfig.apiVersions.sunsetted,
+      sunsetted: [...versionConfig.apiVersions.sunsetted],
     },
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),

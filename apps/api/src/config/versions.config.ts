@@ -1,5 +1,4 @@
-import { readFileSync } from "fs";
-import { join } from "path";
+import { API_VERSION_CONFIG } from "./api-version.config.js";
 
 /**
  * Semantic version structure
@@ -19,14 +18,15 @@ export interface DeprecatedVersionInfo {
 }
 
 /**
- * API version configuration from api-version.json
+ * API version configuration
+ * Re-export type from api-version.config for backward compatibility
  */
 export interface ApiVersionConfig {
   stable: string;
   aliases: Record<string, string>;
   supported: string[];
   deprecated: Record<string, DeprecatedVersionInfo>;
-  sunsetted: string[];
+  sunsetted: readonly string[];
 }
 
 /**
@@ -74,100 +74,12 @@ export function parseVersion(versionString: string): SemanticVersion {
 }
 
 /**
- * Load API version configuration from api-version.json
- */
-export function loadApiVersionConfig(): ApiVersionConfig {
-  const configPath = join(process.cwd(), "api-version.json");
-  const configJson = readFileSync(configPath, "utf-8");
-  const config = JSON.parse(configJson) as ApiVersionConfig;
-
-  // Validate required fields
-  if (!config.stable) {
-    throw new Error("api-version.json must have a 'stable' field");
-  }
-  if (!config.aliases || typeof config.aliases !== "object") {
-    throw new Error("api-version.json must have an 'aliases' object");
-  }
-  if (!Array.isArray(config.supported)) {
-    throw new Error("api-version.json must have a 'supported' array");
-  }
-  if (!config.deprecated || typeof config.deprecated !== "object") {
-    throw new Error("api-version.json must have a 'deprecated' object");
-  }
-  if (!Array.isArray(config.sunsetted)) {
-    throw new Error("api-version.json must have a 'sunsetted' array");
-  }
-
-  // Validate stable version exists
-  if (!config.stable) {
-    throw new Error("Stable version must be defined in api-version.json");
-  }
-
-  // Validate stable is not sunsetted
-  if (config.sunsetted.includes(config.stable)) {
-    throw new Error(
-      `Stable version ${config.stable} cannot be in sunsetted list`,
-    );
-  }
-
-  // Validate stable is not deprecated
-  if (Object.keys(config.deprecated).includes(config.stable)) {
-    throw new Error(
-      `Stable version ${config.stable} cannot be in deprecated list`,
-    );
-  }
-
-  // Validate no version is both sunsetted and supported
-  for (const version of config.sunsetted) {
-    if (config.supported.includes(version)) {
-      throw new Error(
-        `Version ${version} cannot be both sunsetted and supported`,
-      );
-    }
-  }
-
-  // Validate no version is both sunsetted and deprecated
-  for (const version of config.sunsetted) {
-    if (Object.keys(config.deprecated).includes(version)) {
-      throw new Error(
-        `Version ${version} cannot be both sunsetted and deprecated`,
-      );
-    }
-  }
-
-  // Validate no version appears in multiple active categories
-  // (supported and deprecated is OK - that's the deprecation flow)
-  // But we need to ensure each version appears only once in the final list
-  const allVersions = new Set<string>();
-  const duplicates: string[] = [];
-
-  // Check supported versions
-  for (const version of config.supported) {
-    if (allVersions.has(version)) {
-      duplicates.push(version);
-    }
-    allVersions.add(version);
-  }
-
-  // Note: deprecated versions can overlap with supported (that's the deprecation flow)
-  // So we don't check for duplicates between supported and deprecated
-
-  if (duplicates.length > 0) {
-    throw new Error(
-      `Duplicate versions found in supported list: ${duplicates.join(", ")}`,
-    );
-  }
-
-  return config;
-}
-
-/**
- * Create version configuration from api-version.json
+ * Create version configuration from TypeScript config
  *
  * This is the single source of truth for API versioning.
  */
 export function createVersionConfig(): VersionConfig {
-  const apiVersions = loadApiVersionConfig();
+  const apiVersions = API_VERSION_CONFIG as ApiVersionConfig;
 
   const stableVersion = parseVersion(apiVersions.stable);
   const supportedVersions = apiVersions.supported.map(parseVersion);
