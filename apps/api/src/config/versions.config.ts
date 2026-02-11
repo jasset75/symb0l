@@ -44,7 +44,7 @@ export enum VersionStatus {
  * Version configuration for API versioning
  */
 export interface VersionConfig {
-  /** API version configuration from api-version.json */
+  /** API version configuration */
   apiVersions: ApiVersionConfig;
   /** Current stable version */
   stableVersion: SemanticVersion;

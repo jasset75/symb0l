@@ -177,29 +177,28 @@ export async function quoteRoutes(
 
 ### Version Configuration Pattern
 
-Use a **mapping object** instead of if/else chains:
+Actual configuration is separated into three files for maintainability:
+
+1. **Data** (`api-version.data.ts`): Single source of truth, contains only data.
+2. **Schema** (`api-version.schema.ts`): TypeBox definitions.
+3. **Logic** (`api-version.config.ts`): Validation and export.
 
 ```typescript
-const VERSION_CONFIG = {
-  "0.1.0": {
-    routeSchema: HealthV1RouteSchema,
-    handler: handleHealthV1,
-  },
-  "0.2.0": {
-    routeSchema: HealthV2RouteSchema,
-    handler: handleHealthV2,
-  },
+// api-version.data.ts
+export const API_VERSION_DATA = {
+  stable: "0.2.0",
+  aliases: { v0: "0.2.0" },
+  supported: ["0.1.0", "0.2.0"],
+  // ...
 } as const;
-
-const DEFAULT_VERSION = "0.2.0";
 ```
 
 **Benefits**:
 
-- Scalable: Add versions by adding entries
-- Declarative: Configuration separated from logic
-- Type-safe: TypeScript infers types
-- Maintainable: No nested conditionals
+- **Separation of Concerns**: Data is isolated from logic.
+- **Type Safety**: Full TypeScript validation at compile time.
+- **Runtime Validation**: Config is validated against schema on load.
+- **Maintainability**: Easy to update versions without touching code.
 
 ### Swagger Visibility
 
