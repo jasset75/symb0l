@@ -1,8 +1,8 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import Fastify, { FastifyInstance } from "fastify";
-import { healthRoutes } from "../modules/health/index.js";
-import versionResolverPlugin from "../plugins/version-resolver.plugin.js";
+import { healthRoutes } from "./index.js";
+import versionResolverPlugin from "../../plugins/version-resolver.plugin.js";
 
 describe("Health Endpoint Versions", () => {
   let app: FastifyInstance;

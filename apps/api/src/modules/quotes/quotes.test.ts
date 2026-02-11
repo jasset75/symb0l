@@ -3,9 +3,9 @@ import assert from "node:assert";
 import Fastify, { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
 import sensible from "@fastify/sensible";
-import { quoteRoutes } from "../modules/quotes/index.js";
-import { ErrorSchema, QuoteSchema } from "../schemas/common.js";
-import versionResolverPlugin from "../plugins/version-resolver.plugin.js";
+import { quoteRoutes } from "./index.js";
+import { ErrorSchema, QuoteSchema } from "../../schemas/common.js";
+import versionResolverPlugin from "../../plugins/version-resolver.plugin.js";
 
 // Mock quote service for testing
 const mockQuoteServicePlugin = fp(async (fastify) => {
