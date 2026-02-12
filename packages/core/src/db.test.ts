@@ -252,7 +252,21 @@ describe("Database Schema Relationships", () => {
                 instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 isin TEXT UNIQUE,
                 name TEXT NOT NULL,
-                instrument_type TEXT NOT NULL
+                instrument_type TEXT NOT NULL,
+                profile_id INTEGER,
+                risk_level_id INTEGER,
+                asset_class_level_id INTEGER,
+                market_cap_id INTEGER,
+                sector_id INTEGER,
+                sub_industry_id INTEGER,
+                country_exposure_id INTEGER,
+                FOREIGN KEY (profile_id) REFERENCES profile(profile_id),
+                FOREIGN KEY (risk_level_id) REFERENCES risk_level(risk_level_id),
+                FOREIGN KEY (asset_class_level_id) REFERENCES asset_class_level(asset_class_level_id),
+                FOREIGN KEY (market_cap_id) REFERENCES market_cap(market_cap_id),
+                FOREIGN KEY (sector_id) REFERENCES sector(sector_id),
+                FOREIGN KEY (sub_industry_id) REFERENCES sub_industry(sub_industry_id),
+                FOREIGN KEY (country_exposure_id) REFERENCES country_exposure(country_exposure_id)
             );
 
             CREATE TABLE listing (
@@ -276,12 +290,59 @@ describe("Database Schema Relationships", () => {
                 currency_symbol TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS profile (
+                profile_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            );
+    
+            CREATE TABLE IF NOT EXISTS risk_level (
+                risk_level_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                weight INTEGER NOT NULL
+            );
+    
+            CREATE TABLE IF NOT EXISTS asset_class_level (
+                asset_class_level_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT
+            );
+    
+            CREATE TABLE IF NOT EXISTS market_cap (
+                market_cap_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            );
+    
+            CREATE TABLE IF NOT EXISTS sector (
+                sector_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT
+            );
+    
+            CREATE TABLE IF NOT EXISTS sub_industry (
+                sub_industry_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT
+            );
+    
+            CREATE TABLE IF NOT EXISTS country_exposure (
+                country_exposure_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            );
+
             CREATE VIEW view_listings AS
             SELECT
                 l.listing_id,
                 l.symbol_code,
                 i.name AS instrument_name,
                 i.instrument_type,
+                i.isin,
+                p.name AS profile,
+                rl.name AS risk_level,
+                al.name AS asset_class_level,
+                mc.name AS market_cap,
+                s.name AS sector,
+                si.name AS sub_industry,
+                ce.name AS country_exposure,
                 m.name AS market_name,
                 m.mic_code AS market_mic,
                 m.timezone AS market_timezone,
@@ -293,7 +354,14 @@ describe("Database Schema Relationships", () => {
             JOIN instrument i ON l.instrument_id = i.instrument_id
             JOIN market m ON l.market_id = m.market_id
             JOIN country c ON m.country_code = c.country_code
-            JOIN currency cur ON l.currency_id = cur.currency_id;
+            JOIN currency cur ON l.currency_id = cur.currency_id
+            LEFT JOIN profile p ON i.profile_id = p.profile_id
+            LEFT JOIN risk_level rl ON i.risk_level_id = rl.risk_level_id
+            LEFT JOIN asset_class_level al ON i.asset_class_level_id = al.asset_class_level_id
+            LEFT JOIN market_cap mc ON i.market_cap_id = mc.market_cap_id
+            LEFT JOIN sector s ON i.sector_id = s.sector_id
+            LEFT JOIN sub_industry si ON i.sub_industry_id = si.sub_industry_id
+            LEFT JOIN country_exposure ce ON i.country_exposure_id = ce.country_exposure_id;
         `;
 
     testDb.exec(schema);
@@ -395,10 +463,18 @@ describe("Database Schema Relationships", () => {
       .run("XNAS", "NASDAQ", "Nasdaq", "US", "America/New_York");
     const marketId = Number(marketResult.lastInsertRowid);
 
-    // Insert instrument
+    // Insert metadata
+    testDb.prepare("INSERT INTO sector (sector_id, name) VALUES (?, ?)").run(10, "Technology");
+    testDb
+      .prepare("INSERT INTO risk_level (risk_level_id, name, weight) VALUES (?, ?, ?)")
+      .run(5, "High", 80);
+
+    // Insert instrument with metadata
     const instrumentResult = testDb
-      .prepare("INSERT INTO instrument (isin, name, instrument_type) VALUES (?, ?, ?)")
-      .run("US0378331005", "Apple Inc.", "STOCK");
+      .prepare(
+        "INSERT INTO instrument (isin, name, instrument_type, sector_id, risk_level_id) VALUES (?, ?, ?, ?, ?)"
+      )
+      .run("US0378331005", "Apple Inc.", "STOCK", 10, 5);
     const instrumentId = Number(instrumentResult.lastInsertRowid);
 
     // Insert currency
@@ -415,12 +491,19 @@ describe("Database Schema Relationships", () => {
       )
       .run(instrumentId, marketId, "AAPL", "USD");
 
-    // Query view
     const viewResult = testDb
       .prepare("SELECT * FROM view_listings WHERE symbol_code = ?")
       .get("AAPL") as {
       symbol_code: string;
       instrument_name: string;
+      isin: string;
+      profile: string;
+      risk_level: string;
+      asset_class_level: string;
+      market_cap: string;
+      sector: string;
+      sub_industry: string;
+      country_exposure: string;
       market_name: string;
       market_timezone: string;
       country_code: string;
@@ -431,6 +514,9 @@ describe("Database Schema Relationships", () => {
     assert.ok(viewResult, "View result should exist");
     assert.strictEqual(viewResult.symbol_code, "AAPL");
     assert.strictEqual(viewResult.instrument_name, "Apple Inc.");
+    assert.strictEqual(viewResult.isin, "US0378331005");
+    assert.strictEqual(viewResult.sector, "Technology");
+    assert.strictEqual(viewResult.risk_level, "High");
     assert.strictEqual(viewResult.market_name, "NASDAQ");
     assert.strictEqual(viewResult.market_timezone, "America/New_York", "Timezone should match");
     assert.strictEqual(viewResult.country_code, "US", "Country Code should match");

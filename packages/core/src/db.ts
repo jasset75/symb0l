@@ -115,12 +115,21 @@ export function initDb() {
         );
 
         -- Market Listing View (Human Friendly)
-        CREATE VIEW IF NOT EXISTS view_listings AS
+        DROP VIEW IF EXISTS view_listings;
+        CREATE VIEW view_listings AS
         SELECT
             l.listing_id,
             l.symbol_code,
             i.name AS instrument_name,
             i.instrument_type,
+            i.isin,
+            p.name AS profile,
+            rl.name AS risk_level,
+            al.name AS asset_class_level,
+            mc.name AS market_cap,
+            s.name AS sector,
+            si.name AS sub_industry,
+            ce.name AS country_exposure,
             m.name AS market_name,
             m.mic_code AS market_mic,
             m.timezone AS market_timezone,
@@ -132,7 +141,14 @@ export function initDb() {
         JOIN instrument i ON l.instrument_id = i.instrument_id
         JOIN market m ON l.market_id = m.market_id
         JOIN country c ON m.country_code = c.country_code
-        JOIN currency cur ON l.currency_id = cur.currency_id;
+        JOIN currency cur ON l.currency_id = cur.currency_id
+        LEFT JOIN profile p ON i.profile_id = p.profile_id
+        LEFT JOIN risk_level rl ON i.risk_level_id = rl.risk_level_id
+        LEFT JOIN asset_class_level al ON i.asset_class_level_id = al.asset_class_level_id
+        LEFT JOIN market_cap mc ON i.market_cap_id = mc.market_cap_id
+        LEFT JOIN sector s ON i.sector_id = s.sector_id
+        LEFT JOIN sub_industry si ON i.sub_industry_id = si.sub_industry_id
+        LEFT JOIN country_exposure ce ON i.country_exposure_id = ce.country_exposure_id;
     `;
   db.exec(schema);
   console.log("Database initialized at", dbPath);
