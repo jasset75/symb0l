@@ -578,4 +578,10 @@ export const listings: ListingData[] = [
     isin: "US44916E1001",
     currency_code: "USD",
   },
+  {
+    market_prefix: "BIT",
+    symbol_code: "3SIL",
+    isin: "IE00B7XD2195",
+    currency_code: "EUR",
+  },
 ];
