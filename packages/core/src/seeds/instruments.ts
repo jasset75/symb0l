@@ -1287,4 +1287,17 @@ export const instruments: InstrumentData[] = [
     sub_industry_name: "Diversified Metals & Mining",
     country_exposure_name: "US",
   },
+  {
+    instrument_id: 99,
+    isin: "IE00B7XD2195",
+    name: "WISDOMTREE SILVER 3X DAILY LEVERAGED",
+    instrument_type: "ETC",
+    profile_name: "Speculative",
+    risk_level_name: "High",
+    asset_class_level_name: "Growth",
+    market_cap_name: "N/A",
+    sector_name: "Commodities",
+    sub_industry_name: "Silver ETC",
+    country_exposure_name: "Global",
+  },
 ];
