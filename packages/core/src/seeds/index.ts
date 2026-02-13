@@ -3,6 +3,7 @@ import { SeederBuilder } from "./lib/SeederBuilder.js";
 import { countries } from "./countries.js";
 import { currencies } from "./currencies.js";
 import { markets } from "./markets.js";
+import { instrumentTypes } from "./instrument_types.js";
 import { instruments } from "./instruments.js";
 import { listings } from "./listings.js";
 import { profiles } from "./profiles.js";
@@ -128,6 +129,14 @@ export function seedDatabase(): void {
     .mapToValues((item) => [item.country_exposure_id, item.name])
     .seed();
 
+  // Instrument Types
+  new SeederBuilder<(typeof instrumentTypes)[number]>(db)
+    .entity("instrument_types")
+    .sql("INSERT OR REPLACE INTO instrument_type (instrument_type_id, name) VALUES (?, ?)")
+    .data(instrumentTypes)
+    .mapToValues((item) => [item.instrument_type_id, item.name])
+    .seed();
+
   // --- Instrument Seeding (Updated with Metadata Resolution) ---
 
   interface SeedInstrument {
@@ -143,6 +152,7 @@ export function seedDatabase(): void {
     sub_industry_name: string | null;
     country_exposure_name: string | null;
     // These will be resolved
+    instrument_type_id?: number | null;
     profile_id?: number | null;
     risk_level_id?: number | null;
     asset_class_level_id?: number | null;
@@ -156,7 +166,7 @@ export function seedDatabase(): void {
     .entity("instruments")
     .sql(
       `INSERT INTO instrument (
-            instrument_id, isin, name, instrument_type,
+            instrument_id, isin, name, instrument_type_id,
             profile_id, risk_level_id, asset_class_level_id, market_cap_id,
             sector_id, sub_industry_id, country_exposure_id
        )
@@ -164,7 +174,7 @@ export function seedDatabase(): void {
        ON CONFLICT(instrument_id) DO UPDATE SET
             isin = excluded.isin,
             name = excluded.name,
-            instrument_type = excluded.instrument_type,
+            instrument_type_id = excluded.instrument_type_id,
             profile_id = excluded.profile_id,
             risk_level_id = excluded.risk_level_id,
             asset_class_level_id = excluded.asset_class_level_id,
@@ -175,6 +185,13 @@ export function seedDatabase(): void {
     )
     .data(instruments)
     // Resolvers for Metadata
+    .resolveForeignKey({
+      sourceFieldExtractor: (item) => item.instrument_type,
+      table: "instrument_type",
+      filterColumn: "name",
+      valueColumn: "instrument_type_id",
+      targetField: "instrument_type_id",
+    })
     .resolveForeignKey({
       sourceFieldExtractor: (item) => item.profile_name || "",
       table: "profile",
@@ -235,7 +252,7 @@ export function seedDatabase(): void {
       instrument.instrument_id,
       instrument.isin || null,
       instrument.name,
-      instrument.instrument_type,
+      instrument.instrument_type_id || null,
       instrument.profile_id || null,
       instrument.risk_level_id || null,
       instrument.asset_class_level_id || null,

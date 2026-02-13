@@ -34,7 +34,7 @@ export function initDb() {
             instrument_id INTEGER PRIMARY KEY AUTOINCREMENT,
             isin TEXT,
             name TEXT NOT NULL,
-            instrument_type TEXT NOT NULL,
+            instrument_type_id INTEGER NOT NULL,
             profile_id INTEGER,
             risk_level_id INTEGER,
             asset_class_level_id INTEGER,
@@ -42,6 +42,7 @@ export function initDb() {
             sector_id INTEGER,
             sub_industry_id INTEGER,
             country_exposure_id INTEGER,
+            FOREIGN KEY (instrument_type_id) REFERENCES instrument_type(instrument_type_id),
             FOREIGN KEY (profile_id) REFERENCES profile(profile_id),
             FOREIGN KEY (risk_level_id) REFERENCES risk_level(risk_level_id),
             FOREIGN KEY (asset_class_level_id) REFERENCES asset_class_level(asset_class_level_id),
@@ -52,6 +53,11 @@ export function initDb() {
         );
 
         -- Metadata Tables
+        CREATE TABLE IF NOT EXISTS instrument_type (
+            instrument_type_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE
+        );
+
         CREATE TABLE IF NOT EXISTS profile (
             profile_id INTEGER PRIMARY KEY,
             name TEXT NOT NULL UNIQUE
@@ -121,7 +127,7 @@ export function initDb() {
             l.listing_id,
             l.symbol_code,
             i.name AS instrument_name,
-            i.instrument_type,
+            it.name AS instrument_type,
             i.isin,
             p.name AS profile,
             rl.name AS risk_level,
@@ -139,6 +145,7 @@ export function initDb() {
             cur.currency_symbol
         FROM listing l
         JOIN instrument i ON l.instrument_id = i.instrument_id
+        JOIN instrument_type it ON i.instrument_type_id = it.instrument_type_id
         JOIN market m ON l.market_id = m.market_id
         JOIN country c ON m.country_code = c.country_code
         JOIN currency cur ON l.currency_id = cur.currency_id

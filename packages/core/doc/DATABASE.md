@@ -33,19 +33,27 @@ Master data table for currency information.
 
 A denormalized view of listings with human-readable names for instruments, markets, countries, and currencies.
 
-| Column            | Type      | Description                           |
-| :---------------- | :-------- | :------------------------------------ |
-| `listing_id`      | `INTEGER` | Unique identifier.                    |
-| `symbol_code`     | `TEXT`    | Ticker symbol in the specific market. |
-| `instrument_name` | `TEXT`    | Name of the instrument.               |
-| `instrument_type` | `TEXT`    | Type of instrument.                   |
-| `market_name`     | `TEXT`    | Name of the market.                   |
-| `market_mic`      | `TEXT`    | ISO 10383 MIC code.                   |
-| `market_timezone` | `TEXT`    | IANA timezone identifier.             |
-| `country_code`    | `TEXT`    | ISO 3166-1 alpha-2 country code.      |
-| `country_name`    | `TEXT`    | Name of the country.                  |
-| `currency_code`   | `TEXT`    | ISO 4217 Currency code (3 chars).     |
-| `currency_symbol` | `TEXT`    | Currency symbol ($, €, etc.).         |
+| Column              | Type      | Description                           |
+| :------------------ | :-------- | :------------------------------------ |
+| `listing_id`        | `INTEGER` | Unique identifier.                    |
+| `symbol_code`       | `TEXT`    | Ticker symbol in the specific market. |
+| `instrument_name`   | `TEXT`    | Name of the instrument.               |
+| `instrument_type`   | `TEXT`    | Type of instrument.                   |
+| `isin`              | `TEXT`    | ISIN code.                            |
+| `profile`           | `TEXT`    | Investment profile.                   |
+| `risk_level`        | `TEXT`    | Risk level.                           |
+| `asset_class_level` | `TEXT`    | Asset class maturity level.           |
+| `market_cap`        | `TEXT`    | Market capitalization category.       |
+| `sector`            | `TEXT`    | Economic sector.                      |
+| `sub_industry`      | `TEXT`    | Specific sub-industry.                |
+| `country_exposure`  | `TEXT`    | Primary country of exposure.          |
+| `market_name`       | `TEXT`    | Name of the market.                   |
+| `market_mic`        | `TEXT`    | ISO 10383 MIC code.                   |
+| `market_timezone`   | `TEXT`    | IANA timezone identifier.             |
+| `country_code`      | `TEXT`    | ISO 3166-1 alpha-2 country code.      |
+| `country_name`      | `TEXT`    | Name of the country.                  |
+| `currency_code`     | `TEXT`    | ISO 4217 Currency code (3 chars).     |
+| `currency_symbol`   | `TEXT`    | Currency symbol ($, €, etc.).         |
 
 #### Country
 
@@ -83,9 +91,9 @@ Financial instruments with optional ISIN identification and metadata classificat
 | Column                 | Type         | Description                                                    |
 | ---------------------- | ------------ | -------------------------------------------------------------- |
 | `instrument_id`        | INTEGER (PK) | Primary key                                                    |
-| `isin`                 | TEXT (UQ)    | [ISIN](https://www.isin.org/) code (nullable for forex/crypto) |
+| `isin`                 | TEXT         | [ISIN](https://www.isin.org/) code (nullable for forex/crypto) |
 | `name`                 | TEXT         | Full instrument name                                           |
-| `instrument_type`      | TEXT         | Type (STOCK, ETF, BOND, FOREX, CRYPTO, etc.)                   |
+| `instrument_type_id`   | INTEGER (FK) | Type of instrument (Stock, ETF, etc.)                          |
 | `profile_id`           | INTEGER (FK) | Investment profile (e.g., Cyclical, Defensive)                 |
 | `risk_level_id`        | INTEGER (FK) | Risk categorization                                            |
 | `asset_class_level_id` | INTEGER (FK) | Asset class maturity level (e.g., Mature, Growth)              |
@@ -107,6 +115,7 @@ Normalized tables for instrument classification, populated from master data sour
 | `sector`            | `sector_id`, `name`, `desc`            | Economic sectors (GICS-aligned with exceptions for ETFs, FX, Commodities) |
 | `sub_industry`      | `sub_industry_id`, `name`, `desc`      | Granular industry classification (GICS-aligned)                           |
 | `country_exposure`  | `country_exposure_id`, `name`          | Geographic region of primary revenue/operations                           |
+| `instrument_type`   | `instrument_type_id`, `name`           | broad category of instrument (Stock, ETF, FX, etc.)                       |
 
 ### GICS Alignment
 
@@ -125,6 +134,16 @@ These exceptions allow the system to categorize instruments that do not fit into
 #### Listing
 
 Links instruments to markets with specific symbols.
+
+| Column          | Type         | Description                                                            |
+| --------------- | ------------ | ---------------------------------------------------------------------- |
+| `listing_id`    | INTEGER (PK) | Primary key                                                            |
+| `instrument_id` | INTEGER (FK) | Instrument being listed → `instrument(instrument_id)`                  |
+| `market_id`     | INTEGER (FK) | Market where listed → `market(market_id)`                              |
+| `symbol_code`   | TEXT         | Ticker symbol (e.g., "AAPL", "NESN")                                   |
+| `currency_id`   | TEXT (FK)    | Trading currency → `currency(currency_id)`                             |
+|                 |              | **Constraints**                                                        |
+| `UNIQUE`        |              | `(market_id, symbol_code)` - A symbol must be unique within its market |
 
 ## Development Workflow
 

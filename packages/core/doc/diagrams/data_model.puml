@@ -10,7 +10,7 @@ package "Core Domain" {
     --
     isin : TEXT <<UQ, nullable>>
     *name : TEXT
-    *instrument_type : TEXT
+    *instrument_type_id : INTEGER <<FK>>
     profile_id : INTEGER <<FK>>
     risk_level_id : INTEGER <<FK>>
     asset_class_level_id : INTEGER <<FK>>
@@ -103,6 +103,12 @@ package "Metadata Classifications" {
     --
     *name : TEXT <<UQ>>
   }
+
+  entity "InstrumentType" as instrument_type {
+    *instrument_type_id : INTEGER <<PK>>
+    --
+    *name : TEXT <<UQ>>
+  }
 }
 
 entity "view_listings" as view_listings <<view>> {
@@ -134,7 +140,9 @@ instrument }o..d|| asset_class_level
 instrument }o..d|| market_cap
 instrument }o..d|| sector
 instrument }o..d|| sub_industry
+instrument }o..d|| sub_industry
 instrument }o..d|| country_exposure
+instrument }o..l|| instrument_type
 
 ' Layout hints
 profile -[hidden]r- risk_level
