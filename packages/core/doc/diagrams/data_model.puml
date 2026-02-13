@@ -140,17 +140,18 @@ instrument }o..d|| asset_class_level
 instrument }o..d|| market_cap
 instrument }o..d|| sector
 instrument }o..d|| sub_industry
-instrument }o..d|| sub_industry
 instrument }o..d|| country_exposure
-instrument }o..l|| instrument_type
+instrument }o..d|| instrument_type
 
 ' Layout hints
 profile -[hidden]r- risk_level
 risk_level -[hidden]r- asset_class_level
 asset_class_level -[hidden]r- market_cap
-market_cap -[hidden]r- sector
+profile -[hidden]d- sector
+
 sector -[hidden]r- sub_industry
 sub_industry -[hidden]r- country_exposure
+country_exposure -[hidden]r- instrument_type
 
 note right of country
   ISO 3166-1 alpha-2
