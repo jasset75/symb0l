@@ -7,4 +7,5 @@ export interface Quote {
 
 export interface MarketDataProvider {
   getQuote(symbol: string): Promise<Quote | null>;
+  getQuotes(symbols: string[]): Promise<Quote[]>;
 }
