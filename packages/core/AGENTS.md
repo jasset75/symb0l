@@ -43,6 +43,7 @@ This file provides **LLM-first** context and operating rules for AI agents worki
 - ✅ Double quotes (`"`) only.
 - ✅ Semicolons are mandatory.
 - ✅ Prefer `node:test` for testing.
+- ✅ **NO `any` types**. Use `unknown` with type narrowing or proper types.
 
 ---
 
