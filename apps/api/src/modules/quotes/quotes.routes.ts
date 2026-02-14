@@ -1,7 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import { GetQuoteRouteSchema } from "./quotes.schema.js";
-import { getQuote } from "./quotes.handler.js";
+import {
+  GetQuoteRouteSchema,
+  GetBatchQuotesRouteSchema,
+} from "./quotes.schema.js";
+import { getQuote, getQuotesBatch } from "./quotes.handler.js";
 
 /**
  * Quote routes plugin
@@ -12,6 +15,17 @@ export async function quoteRoutes(
   opts: FastifyPluginOptions & { hideFromSwagger?: boolean },
 ) {
   const server = fastify.withTypeProvider<TypeBoxTypeProvider>();
+
+  server.get(
+    "/",
+    {
+      schema: {
+        ...GetBatchQuotesRouteSchema,
+        hide: opts.hideFromSwagger,
+      },
+    },
+    getQuotesBatch,
+  );
 
   server.get(
     "/:symbol",

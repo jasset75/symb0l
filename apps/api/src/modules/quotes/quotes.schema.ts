@@ -28,6 +28,16 @@ export const QuoteParamsSchema = Type.Object({
 
 export type QuoteParamsType = Static<typeof QuoteParamsSchema>;
 
+// Request Query Schema for Batch
+export const QuoteQuerySchema = Type.Object({
+  symbols: Type.String({
+    description: "Comma-separated list of symbols (e.g. AAPL,MSFT)",
+    pattern: "^[A-Z0-9:.,-]+$",
+  }),
+});
+
+export type QuoteQueryType = Static<typeof QuoteQuerySchema>;
+
 // Complete Route Schema
 export const GetQuoteRouteSchema = {
   description: "Get a stock quote by symbol",
@@ -37,6 +47,20 @@ export const GetQuoteRouteSchema = {
     200: {
       description: "Successful response",
       ...Type.Ref("Quote"),
+    },
+    ...StandardErrorResponses,
+  },
+} as const;
+
+export const GetBatchQuotesRouteSchema = {
+  description: "Get multiple stock quotes by symbols",
+  tags: ["quotes"],
+  querystring: QuoteQuerySchema,
+  response: {
+    200: {
+      description: "Successful response",
+      type: "array",
+      items: Type.Ref("Quote"),
     },
     ...StandardErrorResponses,
   },

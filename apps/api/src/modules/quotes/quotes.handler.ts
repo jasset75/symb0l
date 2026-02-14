@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { QuoteParamsType, QuoteType } from "./quotes.schema.js";
+import { QuoteParamsType, QuoteType, QuoteQueryType } from "./quotes.schema.js";
 
 export async function getQuote(
   request: FastifyRequest<{ Params: QuoteParamsType }>,
@@ -7,34 +7,54 @@ export async function getQuote(
 ): Promise<QuoteType> {
   const { symbol } = request.params;
 
-  // Manual validation not strictly needed if schema validation is on,
-  // but good to keep or relying purely on fastify schema
   if (!symbol) {
     return reply.badRequest("Symbol is required");
   }
 
   try {
-    // TODO: Future improvement - Enrich quote with metadata from local DB
-    // We could look up by symbol_code in listing or isin in instrument to add sector, market, etc.
-    // Consideration: Verify performance impact before implementing.
-
     const quote = await request.server.quoteService.getQuote(symbol);
 
     if (!quote) {
       return reply.notFound(`Quote not found for symbol: ${symbol}`);
     }
 
-    // Check for specific API error payload from twelvedata if it returns 200 OK but with error msg
-    // (Depends on twelvedata implementation, assuming standard response for now based on existing code)
-
-    return {
-      symbol: quote.symbol,
-      price: quote.price,
-      currency: quote.currency,
-      timestamp: quote.timestamp,
-    };
-  } catch (error) {
+    return quote;
+  } catch (error: unknown) {
     request.log.error(error);
+    if (error instanceof Error && error.message.includes("Symbols not found")) {
+      return reply.notFound(error.message);
+    }
     return reply.badGateway("Failed to fetch quote from upstream provider");
+  }
+}
+
+export async function getQuotesBatch(
+  request: FastifyRequest<{ Querystring: QuoteQueryType }>,
+  reply: FastifyReply,
+): Promise<QuoteType[]> {
+  const { symbols } = request.query;
+
+  if (!symbols) {
+    return reply.badRequest("Symbols are required");
+  }
+
+  const symbolList = symbols
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (symbolList.length === 0) {
+    return reply.badRequest("At least one symbol is required");
+  }
+
+  try {
+    const quotes = await request.server.quoteService.getQuotes(symbolList);
+    return quotes;
+  } catch (error: unknown) {
+    request.log.error(error);
+    if (error instanceof Error && error.message.includes("Symbols not found")) {
+      return reply.notFound(error.message);
+    }
+    return reply.badGateway("Failed to fetch quotes from upstream provider");
   }
 }
