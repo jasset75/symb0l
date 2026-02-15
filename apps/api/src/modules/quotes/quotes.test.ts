@@ -6,11 +6,14 @@ import sensible from "@fastify/sensible";
 import { quoteRoutes } from "./index.js";
 import { ErrorSchema, QuoteSchema } from "../../schemas/common.js";
 import versionResolverPlugin from "../../plugins/version-resolver.plugin.js";
+import { QuoteService } from "../../domain/services/quote-service.js";
+import { MarketDataProvider } from "../../domain/interfaces/market-data-provider.js";
+import { ListingRepository } from "@symb0l/core";
 
 // Mock quote service for testing
 const mockQuoteServicePlugin = fp(async (fastify) => {
   const mockQuoteService = {
-    provider: null as any, // Mock provider (not used in tests)
+    provider: null as unknown as MarketDataProvider, // Mock provider (not used in tests)
     async getQuote(symbol: string) {
       // Simulate valid symbols
       if (symbol === "AAPL" || symbol === "GOOGL" || symbol === "MSFT") {
@@ -24,9 +27,27 @@ const mockQuoteServicePlugin = fp(async (fastify) => {
       // Return null for invalid symbols (triggers 404)
       return null;
     },
+    // Add getQuotes to satisfy interface structure (even if not used in this test file, or used by batch handler)
+    async getQuotes(symbols: string[]) {
+      // Reuse logic for simplicity
+      const quotes = [];
+      for (const s of symbols) {
+        if (s === "AAPL" || s === "GOOGL" || s === "MSFT") {
+          quotes.push({
+            symbol: s,
+            price: 150.25,
+            currency: "USD",
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+      return quotes;
+    },
+    // Mock listingRepo specifically if needed by internal methods, but here we mock the service itself
+    listingRepo: null as unknown as ListingRepository,
   };
 
-  fastify.decorate("quoteService", mockQuoteService as any);
+  fastify.decorate("quoteService", mockQuoteService as unknown as QuoteService);
 });
 
 describe("Quote Routes - Version Integration", () => {

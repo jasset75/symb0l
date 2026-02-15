@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "path";
 
-const dbPath = path.resolve("symb0l.db");
+const dbPath = process.env.DB_PATH || path.resolve("symb0l.db");
 const db = new DatabaseSync(dbPath);
 
 export function initDb() {
