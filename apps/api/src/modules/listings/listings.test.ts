@@ -86,4 +86,20 @@ test("Listings Endpoint", async (t) => {
     // Ensure they are different
     assert.notDeepStrictEqual(body1, body2);
   });
+
+  await t.test("GET /v0.1.0/listings should return 404", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/v0.1.0/listings",
+    });
+    assert.strictEqual(response.statusCode, 404);
+  });
+
+  await t.test("GET /v0.2.0/listings should return 200", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/v0.2.0/listings?limit=1",
+    });
+    assert.strictEqual(response.statusCode, 200);
+  });
 });

@@ -77,6 +77,7 @@ export async function buildApp() {
   await fastify.register(registerVersionedRoutes, {
     basePath: "/listings",
     routePlugin: listingsRoutes,
+    minVersion: "0.2.0",
   });
 
   await fastify.register(registerVersionedRoutes, {
