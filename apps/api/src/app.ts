@@ -4,7 +4,11 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import sensible from "@fastify/sensible";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import { ErrorSchema, QuoteSchema } from "./schemas/common.js";
+import {
+  ErrorSchema,
+  QuoteSchema,
+  QuoteResultSchema,
+} from "./schemas/common.js";
 import { ListingSchema } from "./modules/listings/listings.schema.js";
 import quoteServicePlugin from "./plugins/quote-service-plugin.js";
 import versionResolverPlugin from "./plugins/version-resolver.plugin.js";
@@ -24,6 +28,7 @@ export async function buildApp() {
   // Register shared schemas
   fastify.addSchema(ErrorSchema);
   fastify.addSchema(QuoteSchema);
+  fastify.addSchema(QuoteResultSchema);
   fastify.addSchema(ListingSchema);
 
   await fastify.register(sensible);

@@ -343,3 +343,44 @@ await fastify.register(registerVersionedRoutes, {
 - Swagger auto-generated from schemas
 - Self-documenting route schemas
 - Clear separation of concerns
+
+---
+
+## Standard Patterns
+
+### Partial Failures & Embedded Errors
+
+For resources that aggregate data from multiple sources (e.g. Listings with Quotes), we use the **Wrapper Pattern** to handle partial failures gracefully without breaking the entire response.
+
+Instead of nullable fields (which are ambiguous), we handle critical side-loaded data with a result wrapper:
+
+```typescript
+type Result<T> =
+  | { status: "success"; data: T }
+  | { status: "error"; error: { code: string; message: string } }
+  | { status: "not_found" };
+```
+
+**Example (Listings with Quotes):**
+
+```json
+{
+  "symbol_code": "AAPL",
+  "quote": {
+    "status": "success",
+    "data": { "price": 150.00, ... }
+  }
+}
+```
+
+If the quote provider fails:
+
+```json
+{
+  "symbol_code": "AAPL",
+  "quote": {
+    "status": "error",
+    "error": { "code": "provider_error", "message": "Timeout" }
+  }
+}
+```

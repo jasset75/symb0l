@@ -1,5 +1,9 @@
 import { Type, Static } from "@sinclair/typebox";
-import { StandardErrorResponses, QuoteSchema } from "../../schemas/common.js";
+import {
+  StandardErrorResponses,
+  QuoteSchema,
+  QuoteResultSchema,
+} from "../../schemas/common.js";
 
 // Listing Schema (matches view_listings)
 export const ListingSchema = Type.Object(
@@ -23,7 +27,7 @@ export const ListingSchema = Type.Object(
     currency_code: Type.String(),
     currency_symbol: Type.String(),
     // Optional quote included
-    quote: Type.Optional(Type.Ref("Quote")),
+    quote: Type.Optional(QuoteResultSchema),
   },
   { $id: "Listing" },
 );
@@ -73,7 +77,7 @@ export const GetListingsRouteSchema = {
     200: {
       description: "Successful response",
       type: "array",
-      items: Type.Ref("Listing"),
+      items: ListingSchema,
     },
     ...StandardErrorResponses,
   },

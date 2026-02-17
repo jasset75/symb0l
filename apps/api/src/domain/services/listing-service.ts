@@ -31,31 +31,54 @@ export class ListingService {
       });
 
       if (symbols.size > 0) {
-        try {
-          // Fetch quotes for these symbols is batch
-          // Note: getQuotes might not return quotes for all symbols if they fail
-          const quotes = await this.quoteService.getQuotes(Array.from(symbols));
+        let quotesMap = new Map();
+        let error: any = null;
 
-          // Index quotes by symbol for O(1) lookup
-          const quotesMap = new Map();
+        try {
+          const quotes = await this.quoteService.getQuotes(Array.from(symbols));
           quotes.forEach((q) => {
             quotesMap.set(q.symbol, q);
           });
-
-          // Attach quotes to listings
-          return listings.map((l: { symbol_code: string }) => ({
-            ...l,
-            quote: quotesMap.get(l.symbol_code),
-          }));
-        } catch (error) {
-          // If quote fetching fails, just return listings without quotes (graceful degradation)
-          // Or we could throw, but for a "listing" endpoint, partial data is usually better.
-          // However, user requirement implied "includeQuote" functionality.
-          // Logging error is good practice.
-          console.error("Failed to fetch quotes for listings:", error);
-          // Return listings as is
-          return listings;
+        } catch (err) {
+          console.error("Failed to fetch quotes for listings:", err);
+          error = err;
         }
+
+        // Attach quotes to listings
+        return listings.map((l: { symbol_code: string }) => {
+          const symbol = l.symbol_code;
+
+          if (error) {
+            return {
+              ...l,
+              quote: {
+                status: "error",
+                error: {
+                  code: "provider_error",
+                  message: error.message || "Failed to fetch quote",
+                },
+              },
+            };
+          }
+
+          const quote = quotesMap.get(symbol);
+          if (quote) {
+            return {
+              ...l,
+              quote: {
+                status: "success",
+                data: quote,
+              },
+            };
+          }
+
+          return {
+            ...l,
+            quote: {
+              status: "not_found",
+            },
+          };
+        });
       }
     }
 

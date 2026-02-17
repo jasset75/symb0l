@@ -65,7 +65,17 @@ test("Listings Endpoint", async (t) => {
     // Let's check if structural integrity is preserved.
     const aapl = body.find((l: any) => l.symbol_code === "AAPL");
     assert.ok(aapl);
-    // Quote might be undefined if external service fails/no key, but request shouldn't crash.
+
+    // Check for wrapper structure
+    if (aapl.quote) {
+      assert.ok(aapl.quote.status);
+      if (aapl.quote.status === "success") {
+        assert.ok(aapl.quote.data);
+        assert.strictEqual(aapl.quote.data.symbol, "AAPL");
+      } else if (aapl.quote.status === "error") {
+        assert.ok(aapl.quote.error);
+      }
+    }
   });
 
   await t.test("GET /listings pagination", async () => {

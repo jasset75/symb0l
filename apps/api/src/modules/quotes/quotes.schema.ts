@@ -1,21 +1,12 @@
 import { Type, Static } from "@sinclair/typebox";
-import { StandardErrorResponses } from "../../schemas/common.js";
+import {
+  StandardErrorResponses,
+  QuoteSchemaBase,
+} from "../../schemas/common.js";
 
-// Quote Schema
-export const QuoteSchema = Type.Object(
-  {
-    symbol: Type.String({ description: "Symbol ticker (e.g. AAPL)" }),
-    price: Type.Number({ description: "Current price" }),
-    currency: Type.String({ description: "Currency code (e.g. USD)" }),
-    timestamp: Type.String({
-      format: "date-time",
-      description: "Quote timestamp",
-    }),
-  },
-  { $id: "Quote" },
-);
-
-export type QuoteType = Static<typeof QuoteSchema>;
+// Quote Schema imported from common.js
+export { QuoteSchema } from "../../schemas/common.js";
+export type { QuoteType } from "../../schemas/common.js";
 
 // Request Params Schema
 export const QuoteParamsSchema = Type.Object({
@@ -46,7 +37,7 @@ export const GetQuoteRouteSchema = {
   response: {
     200: {
       description: "Successful response",
-      ...Type.Ref("Quote"),
+      ...QuoteSchemaBase,
     },
     ...StandardErrorResponses,
   },
@@ -60,7 +51,7 @@ export const GetBatchQuotesRouteSchema = {
     200: {
       description: "Successful response",
       type: "array",
-      items: Type.Ref("Quote"),
+      items: QuoteSchemaBase,
     },
     ...StandardErrorResponses,
   },
