@@ -9,14 +9,20 @@ declare module "fastify" {
   }
 }
 
-import { ListingRepository } from "@symb0l/core";
-
 export default fp(async (fastify: FastifyInstance) => {
   const apiKey = process.env.TWELVE_DATA_API_KEY || "";
 
   // Composition Root
   const provider = new TwelveDataProvider(apiKey);
-  const listingRepo = new ListingRepository();
+  // Relies on repository-plugin being registered before this
+  const listingRepo = fastify.listingRepository;
+
+  if (!listingRepo) {
+    throw new Error(
+      "ListingRepository not found. Ensure repository-plugin is registered.",
+    );
+  }
+
   const service = new QuoteService(provider, listingRepo);
 
   fastify.decorate("quoteService", service);

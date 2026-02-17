@@ -1,7 +1,14 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const dbPath = process.env.DB_PATH || path.resolve("symb0l.db");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Resolve path relative to this file (src/db.ts or dist/db.js)
+// Both are one level deep from package root where symb0l.db resides
+const defaultDbPath = path.resolve(__dirname, "../symb0l.db");
+const dbPath = process.env.DB_PATH || defaultDbPath;
 const db = new DatabaseSync(dbPath);
 
 export function initDb() {
