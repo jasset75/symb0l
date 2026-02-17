@@ -45,7 +45,7 @@ describe("Currency Seeds Integration Tests", () => {
       if (fs.existsSync(testDbPath)) {
         fs.unlinkSync(testDbPath);
       }
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   });

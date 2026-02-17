@@ -5,11 +5,7 @@ import fs from "fs";
 import path from "path";
 
 // Import all seed data
-import { countries } from "./countries.js";
-import { markets } from "./markets.js";
-import { currencies } from "./currencies.js";
 import { instruments } from "./instruments.js";
-import { listings } from "./listings.js";
 import { profiles } from "./profiles.js";
 import { riskLevels } from "./risk_levels.js";
 import { assetClassLevels } from "./asset_class_levels.js";
@@ -17,11 +13,11 @@ import { marketCaps } from "./market_caps.js";
 import { sectors } from "./sectors.js";
 import { subIndustries } from "./sub_industries.js";
 import { countryExposures } from "./country_exposures.js";
+import { SeederBuilder } from "./lib/SeederBuilder.js";
 
 // Re-use logic from index.ts by importing the SeederBuilder or rewriting the small logic here?
 // Since index.ts exports `seedDatabase` which uses the Global `db` instance, we can't easily reuse it for a test instance.
 // We will reuse the SeederBuilder and replicate the seeding logic in the test setup.
-import { SeederBuilder } from "./lib/SeederBuilder.js";
 
 describe("Metadata Seeds Integration Tests", () => {
   let testDb: DatabaseSync;

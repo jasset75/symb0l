@@ -1,10 +1,17 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
+import { gte } from "semver";
 
 interface VersionedRouteOptions extends FastifyPluginOptions {
   /**
    * Base path for the route (e.g., "/quotes", "/health")
    */
   basePath: string;
+
+  /**
+   * Minimum API version required for this route (e.g. "0.2.0")
+   * If set, versions lower than this will not be registered
+   */
+  minVersion?: string;
 
   /**
    * Route registration function
@@ -33,7 +40,7 @@ export async function registerVersionedRoutes(
   fastify: FastifyInstance,
   opts: VersionedRouteOptions,
 ) {
-  const { basePath, routePlugin, versionOptions = {} } = opts;
+  const { basePath, routePlugin, versionOptions = {}, minVersion } = opts;
 
   const versionPrefixes = fastify.getVersionPrefixes();
   const stableVersion = fastify.versionConfig.stableVersion.full;
@@ -45,6 +52,31 @@ export async function registerVersionedRoutes(
     const versionPrefix = versionPrefixes[i];
     const isCanonical = versionPrefix === canonicalPrefix;
 
+    // Extract version from prefix (e.g., "v0.2.0" -> "0.2.0")
+    // If prefix is empty (default route), it maps to stable version for logic purposes?
+    // Actually, default route implies "latest/stable".
+    // Extract version from prefix mechanism
+    // 1. If prefix is empty, use stable version
+    // 2. If prefix is an alias (e.g. "v0"), resolve it via config
+    // 3. Otherwise assume it's "vX.Y.Z" and strip the 'v'
+    let versionString: string;
+
+    if (!versionPrefix) {
+      versionString = stableVersion;
+    } else if (
+      fastify.versionConfig.apiVersions.aliases &&
+      fastify.versionConfig.apiVersions.aliases[versionPrefix]
+    ) {
+      versionString = fastify.versionConfig.apiVersions.aliases[versionPrefix];
+    } else {
+      versionString = versionPrefix.substring(1);
+    }
+
+    // Check minVersion constraint
+    if (minVersion && !gte(versionString, minVersion)) {
+      continue;
+    }
+
     // Build full prefix
     // For quotes: /v0.2.0/quotes
     // For health: /v0.2.0 (health defines /health internally)
@@ -52,7 +84,9 @@ export async function registerVersionedRoutes(
       ? `/${versionPrefix}${basePath}`
       : basePath;
 
-    // Extract version from prefix (e.g., "v0.2.0" -> "0.2.0")
+    // Pass version to route plugin (empty string for default route seems to be the pattern)
+    // But wait, previous logic passed empty string?
+    // "const version = versionPrefix ? versionPrefix.substring(1) : "";"
     const version = versionPrefix ? versionPrefix.substring(1) : "";
 
     // Get version-specific options if provided
