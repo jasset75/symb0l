@@ -174,58 +174,51 @@ describe("Metadata Seeds Integration Tests", () => {
       )
       .data(instruments)
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.profile_name || "",
         table: "profile",
-        filterColumn: "name",
         valueColumn: "profile_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.profile_name || "" }],
         targetField: "profile_id",
         optional: true,
       })
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.risk_level_name || "",
         table: "risk_level",
-        filterColumn: "name",
         valueColumn: "risk_level_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.risk_level_name || "" }],
         targetField: "risk_level_id",
         optional: true,
       })
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.asset_class_level_name || "",
         table: "asset_class_level",
-        filterColumn: "name",
         valueColumn: "asset_class_level_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.asset_class_level_name || "" }],
         targetField: "asset_class_level_id",
         optional: true,
       })
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.market_cap_name || "",
         table: "market_cap",
-        filterColumn: "name",
         valueColumn: "market_cap_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.market_cap_name || "" }],
         targetField: "market_cap_id",
         optional: true,
       })
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.sector_name || "",
         table: "sector",
-        filterColumn: "name",
         valueColumn: "sector_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.sector_name || "" }],
         targetField: "sector_id",
         optional: true,
       })
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.sub_industry_name || "",
         table: "sub_industry",
-        filterColumn: "name",
         valueColumn: "sub_industry_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.sub_industry_name || "" }],
         targetField: "sub_industry_id",
         optional: true,
       })
       .resolveForeignKey({
-        sourceFieldExtractor: (item) => item.country_exposure_name || "",
         table: "country_exposure",
-        filterColumn: "name",
         valueColumn: "country_exposure_id",
+        filters: [{ column: "name", valueExtractor: (item) => item.country_exposure_name || "" }],
         targetField: "country_exposure_id",
         optional: true,
       })

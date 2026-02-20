@@ -30,7 +30,7 @@ export class ListingRepository {
     // Create placeholders for the IN clause
     const placeholders = symbols.map(() => "?").join(",");
     const query = `
-      SELECT symbol_code 
+      SELECT DISTINCT symbol_code
       FROM listing 
       WHERE symbol_code IN (${placeholders})
     `;
@@ -43,6 +43,91 @@ export class ListingRepository {
       return results.map((row) => row.symbol_code);
     } catch (error) {
       console.error("Error validating symbols:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves canonical symbols to provider-specific symbols.
+   * If no mapping exists for a symbol, it falls back to the canonical symbol.
+   */
+  async getProviderSymbols(symbols: string[], provider: string): Promise<Map<string, string>> {
+    const mapping = new Map<string, string>();
+    if (symbols.length === 0) {
+      return mapping;
+    }
+
+    const placeholders = symbols.map(() => "?").join(",");
+    const query = `
+      SELECT
+        l.symbol_code AS canonical_symbol,
+        MIN(COALESCE(lps.provider_symbol, l.symbol_code)) AS provider_symbol
+      FROM listing l
+      LEFT JOIN listing_provider_symbol lps
+        ON lps.listing_id = l.listing_id
+       AND lps.provider = ?
+      WHERE l.symbol_code IN (${placeholders})
+      GROUP BY l.symbol_code
+    `;
+
+    try {
+      const statement = db.prepare(query);
+      const results = statement.all(provider, ...symbols) as {
+        canonical_symbol: string;
+        provider_symbol: string;
+      }[];
+
+      for (const row of results) {
+        mapping.set(row.canonical_symbol, row.provider_symbol);
+      }
+
+      return mapping;
+    } catch (error) {
+      console.error("Error resolving provider symbols:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves provider-specific symbols back to canonical symbols.
+   * If no mapping exists, it falls back to identity (provider_symbol === symbol_code).
+   */
+  async getCanonicalSymbols(
+    providerSymbols: string[],
+    provider: string
+  ): Promise<Map<string, string>> {
+    const mapping = new Map<string, string>();
+    if (providerSymbols.length === 0) {
+      return mapping;
+    }
+
+    const placeholders = providerSymbols.map(() => "?").join(",");
+    const query = `
+      SELECT
+        MIN(l.symbol_code) AS canonical_symbol,
+        COALESCE(lps.provider_symbol, l.symbol_code) AS provider_symbol
+      FROM listing l
+      LEFT JOIN listing_provider_symbol lps
+        ON lps.listing_id = l.listing_id
+       AND lps.provider = ?
+      WHERE COALESCE(lps.provider_symbol, l.symbol_code) IN (${placeholders})
+      GROUP BY COALESCE(lps.provider_symbol, l.symbol_code)
+    `;
+
+    try {
+      const statement = db.prepare(query);
+      const results = statement.all(provider, ...providerSymbols) as {
+        canonical_symbol: string;
+        provider_symbol: string;
+      }[];
+
+      for (const row of results) {
+        mapping.set(row.provider_symbol, row.canonical_symbol);
+      }
+
+      return mapping;
+    } catch (error) {
+      console.error("Error resolving canonical symbols:", error);
       throw error;
     }
   }

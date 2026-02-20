@@ -194,8 +194,7 @@ describe("SeederBuilder", () => {
           targetField: "parent_id",
           table: "parent",
           valueColumn: "id",
-          filterColumn: "code",
-          sourceFieldExtractor: (item) => item.parentCode,
+          filters: [{ column: "code", valueExtractor: (item) => item.parentCode }],
         })
         .mapToValues((item) => [
           item.code,
@@ -269,15 +268,13 @@ describe("SeederBuilder", () => {
           targetField: "category_id",
           table: "category",
           valueColumn: "id",
-          filterColumn: "code",
-          sourceFieldExtractor: (item) => item.categoryCode,
+          filters: [{ column: "code", valueExtractor: (item) => item.categoryCode }],
         })
         .resolveForeignKey({
           targetField: "region_id",
           table: "region",
           valueColumn: "id",
-          filterColumn: "code",
-          sourceFieldExtractor: (item) => item.regionCode,
+          filters: [{ column: "code", valueExtractor: (item) => item.regionCode }],
         })
         .mapToValues((item) => [
           item.code,
@@ -295,6 +292,100 @@ describe("SeederBuilder", () => {
       >;
       assert.strictEqual(result.category_id, 1);
       assert.strictEqual(result.region_id, 1);
+
+      db.close();
+    });
+
+    it("should resolve foreign keys with additional where clause (composite lookup)", () => {
+      const db = new DatabaseSync(":memory:");
+
+      db.exec(`
+        CREATE TABLE market (
+          market_id INTEGER PRIMARY KEY,
+          ticker_prefix TEXT UNIQUE NOT NULL
+        );
+
+        CREATE TABLE listing (
+          listing_id INTEGER PRIMARY KEY,
+          market_id INTEGER NOT NULL,
+          symbol_code TEXT NOT NULL,
+          UNIQUE(market_id, symbol_code)
+        );
+
+        CREATE TABLE listing_provider_symbol (
+          id INTEGER PRIMARY KEY,
+          listing_id INTEGER NOT NULL,
+          provider TEXT NOT NULL,
+          provider_symbol TEXT NOT NULL
+        )
+      `);
+
+      db.prepare("INSERT INTO market (market_id, ticker_prefix) VALUES (?, ?)").run(1, "CURRENCY");
+      db.prepare("INSERT INTO market (market_id, ticker_prefix) VALUES (?, ?)").run(2, "NASDAQ");
+      db.prepare("INSERT INTO listing (listing_id, market_id, symbol_code) VALUES (?, ?, ?)").run(
+        101,
+        1,
+        "EURUSD"
+      );
+      db.prepare("INSERT INTO listing (listing_id, market_id, symbol_code) VALUES (?, ?, ?)").run(
+        102,
+        2,
+        "EURUSD"
+      );
+
+      interface ListingProviderSymbolSeed {
+        market_prefix: string;
+        symbol_code: string;
+        provider: string;
+        provider_symbol: string;
+      }
+
+      const data: ListingProviderSymbolSeed[] = [
+        {
+          market_prefix: "CURRENCY",
+          symbol_code: "EURUSD",
+          provider: "twelve",
+          provider_symbol: "EUR/USD",
+        },
+      ];
+
+      const count = new SeederBuilder<ListingProviderSymbolSeed>(db)
+        .entity("listing_provider_symbols")
+        .sql(
+          "INSERT INTO listing_provider_symbol (listing_id, provider, provider_symbol) VALUES (?, ?, ?)"
+        )
+        .data(data)
+        .resolveForeignKey({
+          table: "market",
+          valueColumn: "market_id",
+          filters: [{ column: "ticker_prefix", valueExtractor: (item) => item.market_prefix }],
+          targetField: "market_id",
+        })
+        .resolveForeignKey({
+          table: "listing",
+          valueColumn: "listing_id",
+          filters: [
+            { column: "symbol_code", valueExtractor: (item) => item.symbol_code },
+            {
+              column: "market_id",
+              valueExtractor: (item) => (item as unknown as Record<string, number>).market_id,
+            },
+          ],
+          targetField: "listing_id",
+        })
+        .mapToValues((item) => [
+          (item as unknown as Record<string, number>).listing_id,
+          item.provider,
+          item.provider_symbol,
+        ])
+        .seed();
+
+      assert.strictEqual(count, 1);
+      const row = db
+        .prepare("SELECT listing_id, provider_symbol FROM listing_provider_symbol")
+        .get() as { listing_id: number; provider_symbol: string };
+      assert.strictEqual(row.listing_id, 101);
+      assert.strictEqual(row.provider_symbol, "EUR/USD");
 
       db.close();
     });
@@ -333,8 +424,7 @@ describe("SeederBuilder", () => {
               targetField: "parent_id",
               table: "parent",
               valueColumn: "id",
-              filterColumn: "code",
-              sourceFieldExtractor: (item) => item.parentCode,
+              filters: [{ column: "code", valueExtractor: (item) => item.parentCode }],
             })
             .mapToValues((item) => [
               item.code,
