@@ -167,4 +167,25 @@ describe("Health Endpoint Versions", () => {
       assert.ok(typeof v020Body.uptime === "number");
     });
   });
+
+  describe("Default Version Behavior", () => {
+    beforeEach(async () => {
+      await app.register(healthRoutes, {
+        prefix: "/health",
+      });
+    });
+
+    it("should use stable version format when version is not provided", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/health",
+      });
+
+      assert.strictEqual(response.statusCode, 200);
+      const body = JSON.parse(response.body);
+      assert.strictEqual(body.status, "healthy");
+      assert.ok(body.api);
+      assert.ok(body.versions);
+    });
+  });
 });

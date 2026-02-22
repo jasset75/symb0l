@@ -217,6 +217,20 @@ server.get(
 );
 ```
 
+### Sunsetted Version Policy
+
+Sunsetted versions are intentionally kept as registered routes so requests can return a **410 Gone** response instead of a generic **404 Not Found**.
+
+This behavior provides explicit migration signaling to API consumers:
+
+- **410 Gone**: version existed but was removed and must be upgraded
+- **404 Not Found**: route/version mismatch with no migration context
+
+Implementation notes:
+
+- Versioned routes are still mounted for configured sunsetted versions.
+- `version-headers` enforces the `410 Gone` response and upgrade guidance.
+
 ---
 
 ## Adding a New Endpoint

@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { gte } from "semver";
+import { extractVersionFromPrefix } from "../config/versions.config.js";
 
 interface VersionedRouteOptions extends FastifyPluginOptions {
   /**
@@ -52,25 +53,14 @@ export async function registerVersionedRoutes(
     const versionPrefix = versionPrefixes[i];
     const isCanonical = versionPrefix === canonicalPrefix;
 
-    // Extract version from prefix (e.g., "v0.2.0" -> "0.2.0")
-    // If prefix is empty (default route), it maps to stable version for logic purposes?
-    // Actually, default route implies "latest/stable".
     // Extract version from prefix mechanism
     // 1. If prefix is empty, use stable version
     // 2. If prefix is an alias (e.g. "v0"), resolve it via config
     // 3. Otherwise assume it's "vX.Y.Z" and strip the 'v'
-    let versionString: string;
-
-    if (!versionPrefix) {
-      versionString = stableVersion;
-    } else if (
-      fastify.versionConfig.apiVersions.aliases &&
-      fastify.versionConfig.apiVersions.aliases[versionPrefix]
-    ) {
-      versionString = fastify.versionConfig.apiVersions.aliases[versionPrefix];
-    } else {
-      versionString = versionPrefix.substring(1);
-    }
+    const versionString = extractVersionFromPrefix(
+      versionPrefix,
+      fastify.versionConfig,
+    );
 
     // Check minVersion constraint
     if (minVersion && !gte(versionString, minVersion)) {

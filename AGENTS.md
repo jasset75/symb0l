@@ -287,6 +287,9 @@ cp apps/api/.env.example apps/api/.env
 # 3) Build workspace packages (required so apps/api uses up-to-date @symb0l/core dist)
 pnpm --filter @symb0l/core build
 pnpm --filter symb0l-api build
+
+# 4) Bootstrap the database for the new worktree
+pnpm seed
 ```
 
 Use `.env` files from the primary local workspace as the source of truth. Use `.env.example` only when no existing `.env` is available there.
@@ -299,3 +302,57 @@ When using worktrees, treat each worktree as a **separate workspace**.
   - **Why?**: If you open the main folder, the IDE indexes both the main `node_modules` and the worktree's `node_modules`, causing duplicate symbol errors and slow performance.
   - **Disk Usage**: `pnpm` uses a global content-addressable store, so the physical `node_modules` files in worktrees share disk space with the main project (hard links), minimizing overhead.
 - **AI Agents & Humans**: Point the agent or your editor to the worktree directory as the **workspace root**. This ensures actions are performed on the correct files and git context.
+
+---
+
+## 🧩 API Architecture (DI & Autoload)
+
+The `apps/api` service uses a fully decoupled architecture powered by `fastify-plugin` (fp) dependencies and `@fastify/autoload`. There is no manual registration inside `app.ts`.
+
+### 1. Adding a New Service/Plugin (Dependency Injection)
+
+We use a central Dependency Injection container to avoid scatter-instantiation across the initialization phase.
+
+1. **Instantiate** your service in `apps/api/src/infrastructure/di/container.ts`.
+2. **Inject** it into the fastify instance in `apps/api/src/plugins/di.plugin.ts` using `fastify.decorate(name, service)`.
+3. **Declare** its type in `apps/api/src/types/fastify.d.ts` under the `FastifyInstance` interface.
+
+### 2. Creating an Initialization Plugin
+
+If you need to configure a package (e.g., sensible, cors, swagger), create a file in `apps/api/src/plugins/`.
+
+To ensure the execution order is correct (since autoload picks them up asynchronously), use the `dependencies` array in the `fp` wrapper:
+
+```typescript
+export default fp(
+  async (fastify: FastifyInstance) => {
+    // Your initialization logic
+  },
+  {
+    name: "your-plugin-name",
+    fastify: "5.x",
+    dependencies: ["di-plugin", "version-resolver"], // <- Forces these to load FIRST
+  },
+);
+```
+
+### 3. Adding a New Route Endpoint
+
+Because routes are intrinsically versioned, they are **NOT** autoloaded by default. They are centrally orchestrated inside `apps/api/src/plugins/routes.plugin.ts`.
+
+To add a new endpoint:
+
+1. Create your module folder (e.g., `modules/users/`) with its schema, handler, and routes (`users.routes.ts`).
+2. Export a standard fastify plugin function containing your endpoints.
+3. Open `apps/api/src/plugins/routes.plugin.ts`.
+4. Register your module using the Versioned Routes helper:
+
+```typescript
+await fastify.register(registerVersionedRoutes, {
+  basePath: "/users",
+  routePlugin: usersRoutes,
+  minVersion: "0.2.0", // Optional: The version where this endpoint was introduced
+});
+```
+
+This guarantees your endpoint is correctly mapped, version prefixes are handled automatically (`/v0.2.0/users`), and legacy aliases are applied.
