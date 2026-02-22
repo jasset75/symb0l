@@ -27,10 +27,8 @@ export default fp(
     await fastify.register(registerVersionedRoutes, {
       basePath: "/health",
       routePlugin: healthRoutes,
-      versionOptions: {
-        "0.1.0": { version: "0.1.0" },
-        "0.2.0": { version: "0.2.0" },
-      },
+      // No explicit versionOptions or minVersion provided,
+      // automatically registers for all supported versions starting from '0.1.0'
     });
 
     // Default route redirects to health
