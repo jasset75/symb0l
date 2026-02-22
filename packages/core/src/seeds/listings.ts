@@ -210,7 +210,7 @@ export const listings: ListingData[] = [
     market_prefix: "CURRENCY",
     symbol_code: "EURUSD",
     isin: "EUR.USD",
-    currency_code: "EUR",
+    currency_code: "USD",
   },
   {
     market_prefix: "BME",
@@ -474,7 +474,7 @@ export const listings: ListingData[] = [
     market_prefix: "CURRENCY",
     symbol_code: "USDEUR",
     isin: "USD.EUR",
-    currency_code: "USD",
+    currency_code: "EUR",
   },
   {
     market_prefix: "BIT",
