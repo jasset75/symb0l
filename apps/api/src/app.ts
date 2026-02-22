@@ -10,15 +10,16 @@ import {
   QuoteResultSchema,
 } from "./schemas/common.js";
 import { ListingSchema } from "./modules/listings/listings.schema.js";
-import quoteServicePlugin from "./plugins/quote-service-plugin.js";
+import { join } from "path";
+import { fileURLToPath } from "url";
+import autoload from "@fastify/autoload";
 import versionResolverPlugin from "./plugins/version-resolver.plugin.js";
-import versionHeadersPlugin from "./plugins/version-headers.plugin.js";
 import { registerVersionedRoutes } from "./plugins/versioned-routes.plugin.js";
 import { healthRoutes } from "./modules/health/index.js";
 import { quoteRoutes } from "./modules/quotes/index.js";
 import { listingsRoutes } from "./modules/listings/listings.routes.js";
-import listingServicePlugin from "./plugins/listing-service-plugin.js";
-import repositoryPlugin from "./plugins/repository-plugin.js";
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -37,11 +38,15 @@ export async function buildApp() {
     origin: true, // Allow all origins for now
   });
 
-  // Register version resolver plugin first
+  // Register version resolver explicitly first, as it's required by autoloaded plugins
   await fastify.register(versionResolverPlugin);
 
-  // Register version headers plugin (depends on version resolver)
-  await fastify.register(versionHeadersPlugin);
+  // Autoload all plugins in the plugins directory
+  await fastify.register(autoload, {
+    dir: join(__dirname, "plugins"),
+    ignorePattern:
+      /.*(?:test|spec|version-resolver\.plugin|versioned-routes\.plugin)\.ts$/,
+  });
 
   // Register Swagger
   // @ts-ignore
@@ -64,12 +69,6 @@ export async function buildApp() {
   await fastify.register(swaggerUi, {
     routePrefix: "/documentation",
   });
-
-  // Register repository plugin first
-  await fastify.register(repositoryPlugin);
-
-  await fastify.register(quoteServicePlugin);
-  await fastify.register(listingServicePlugin);
 
   // Register versioned routes using helper plugin
   // Automatically registers all versions (canonical + aliases + default)
