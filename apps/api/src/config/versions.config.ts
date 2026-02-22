@@ -133,6 +133,28 @@ export function resolveVersion(
 }
 
 /**
+ * Extract semantic version string from a route prefix
+ *
+ * @param versionPrefix - Prefix used in route (e.g., 'v0.2.0', 'v0', or '')
+ * @param config - Version configuration
+ * @returns Semantic version string (e.g., '0.2.0' or stable version)
+ */
+export function extractVersionFromPrefix(
+  versionPrefix: string,
+  config: VersionConfig,
+): string {
+  if (!versionPrefix) {
+    return config.stableVersion.full;
+  }
+
+  if (config.apiVersions.aliases && config.apiVersions.aliases[versionPrefix]) {
+    return config.apiVersions.aliases[versionPrefix];
+  }
+
+  return versionPrefix.substring(1);
+}
+
+/**
  * Get the status of a version
  *
  * @param version - Version string (e.g., '1.2.0')
