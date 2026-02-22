@@ -29,6 +29,16 @@ package "Core Domain" {
     currency_id : TEXT <<FK>>
   }
 
+  entity "ListingProviderSymbol" as listing_provider_symbol {
+    *listing_provider_symbol_id : INTEGER <<PK>>
+    --
+    *listing_id : INTEGER <<FK>>
+    *provider : TEXT
+    *provider_symbol : TEXT
+    *created_at : TEXT
+    *updated_at : TEXT
+  }
+
   entity "Market" as market {
     *market_id : INTEGER <<PK>>
     --
@@ -130,6 +140,7 @@ country ||..d|{ market
 market ||..d|{ listing
 instrument ||..r|{ listing
 currency ||..u|{ listing
+listing ||..r|{ listing_provider_symbol
 
 listing ..> view_listings : projects
 
@@ -167,6 +178,16 @@ end note
 note right of instrument
   ISIN nullable for
   forex and crypto
+end note
+
+note right of listing
+  symbol_code is canonical
+  internal identifier
+end note
+
+note right of listing_provider_symbol
+  Provider-specific symbol mapping
+  (e.g., EURUSD -> EUR/USD)
 end note
 
 @enduml

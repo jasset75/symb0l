@@ -57,6 +57,18 @@ describe("Database Initialization", () => {
                 UNIQUE(market_id, symbol_code)
             );
 
+            CREATE TABLE IF NOT EXISTS listing_provider_symbol (
+                listing_provider_symbol_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                listing_id INTEGER NOT NULL,
+                provider TEXT NOT NULL,
+                provider_symbol TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (listing_id) REFERENCES listing(listing_id),
+                UNIQUE(listing_id, provider),
+                UNIQUE(provider, provider_symbol)
+            );
+
             CREATE TABLE IF NOT EXISTS currency (
                 currency_id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -84,6 +96,10 @@ describe("Database Initialization", () => {
     assert.ok(tableNames.includes("market"), "market table should exist");
     assert.ok(tableNames.includes("instrument"), "instrument table should exist");
     assert.ok(tableNames.includes("listing"), "listing table should exist");
+    assert.ok(
+      tableNames.includes("listing_provider_symbol"),
+      "listing_provider_symbol table should exist"
+    );
     assert.ok(tableNames.includes("currency"), "currency table should exist");
   });
 

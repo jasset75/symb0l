@@ -6,6 +6,7 @@ import { markets } from "./markets.js";
 import { instrumentTypes } from "./instrument_types.js";
 import { instruments } from "./instruments.js";
 import { listings } from "./listings.js";
+import { listingProviderSymbols } from "./listing_provider_symbols.js";
 import { profiles } from "./profiles.js";
 import { riskLevels } from "./risk_levels.js";
 import { assetClassLevels } from "./asset_class_levels.js";
@@ -186,65 +187,57 @@ export function seedDatabase(): void {
     .data(instruments)
     // Resolvers for Metadata
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.instrument_type,
       table: "instrument_type",
-      filterColumn: "name",
       valueColumn: "instrument_type_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.instrument_type }],
       targetField: "instrument_type_id",
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.profile_name || "",
       table: "profile",
-      filterColumn: "name",
       valueColumn: "profile_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.profile_name || "" }],
       targetField: "profile_id",
       optional: true,
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.risk_level_name || "",
       table: "risk_level",
-      filterColumn: "name",
       valueColumn: "risk_level_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.risk_level_name || "" }],
       targetField: "risk_level_id",
       optional: true,
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.asset_class_level_name || "",
       table: "asset_class_level",
-      filterColumn: "name",
       valueColumn: "asset_class_level_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.asset_class_level_name || "" }],
       targetField: "asset_class_level_id",
       optional: true,
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.market_cap_name || "",
       table: "market_cap",
-      filterColumn: "name",
       valueColumn: "market_cap_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.market_cap_name || "" }],
       targetField: "market_cap_id",
       optional: true,
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.sector_name || "",
       table: "sector",
-      filterColumn: "name",
       valueColumn: "sector_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.sector_name || "" }],
       targetField: "sector_id",
       optional: true,
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.sub_industry_name || "",
       table: "sub_industry",
-      filterColumn: "name",
       valueColumn: "sub_industry_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.sub_industry_name || "" }],
       targetField: "sub_industry_id",
       optional: true,
     })
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.country_exposure_name || "",
       table: "country_exposure",
-      filterColumn: "name",
       valueColumn: "country_exposure_id",
+      filters: [{ column: "name", valueExtractor: (item) => item.country_exposure_name || "" }],
       targetField: "country_exposure_id",
       optional: true,
     })
@@ -273,26 +266,23 @@ export function seedDatabase(): void {
     .data(listings)
     // Resolve market_id from market table using ticker_prefix (e.g., NASDAQ)
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.market_prefix,
       table: "market",
-      filterColumn: "ticker_prefix",
       valueColumn: "market_id",
+      filters: [{ column: "ticker_prefix", valueExtractor: (item) => item.market_prefix }],
       targetField: "market_id",
     })
     // Resolve instrument_id from instrument table using isin
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.isin,
       table: "instrument",
-      filterColumn: "isin",
       valueColumn: "instrument_id",
+      filters: [{ column: "isin", valueExtractor: (item) => item.isin }],
       targetField: "instrument_id",
     })
     // Resolve currency_id from currency table using code3 (e.g., USD)
     .resolveForeignKey({
-      sourceFieldExtractor: (item) => item.currency_code,
       table: "currency",
-      filterColumn: "code3",
       valueColumn: "currency_id",
+      filters: [{ column: "code3", valueExtractor: (item) => item.currency_code }],
       targetField: "currency_id",
     })
     .mapToValues((item) => [
@@ -305,6 +295,42 @@ export function seedDatabase(): void {
       item.currency_id,
       // Let SQLite auto-generate listing_id (or we could map it if we had stable IDs)
       null,
+    ])
+    .seed();
+
+  // Seed provider-specific listing symbols (non-redundant mappings only)
+  new SeederBuilder<(typeof listingProviderSymbols)[number]>(db)
+    .entity("listing_provider_symbols")
+    .sql(
+      `INSERT INTO listing_provider_symbol (listing_id, provider, provider_symbol)
+       VALUES (?, ?, ?)
+       ON CONFLICT(listing_id, provider) DO UPDATE SET
+       provider_symbol = excluded.provider_symbol,
+       updated_at = CURRENT_TIMESTAMP`
+    )
+    .data(listingProviderSymbols)
+    .resolveForeignKey({
+      table: "market",
+      valueColumn: "market_id",
+      filters: [{ column: "ticker_prefix", valueExtractor: (item) => item.market_prefix }],
+      targetField: "market_id",
+    })
+    .resolveForeignKey({
+      table: "listing",
+      valueColumn: "listing_id",
+      filters: [
+        { column: "symbol_code", valueExtractor: (item) => item.symbol_code },
+        {
+          column: "market_id",
+          valueExtractor: (item) => (item as unknown as Record<string, number>).market_id,
+        },
+      ],
+      targetField: "listing_id",
+    })
+    .mapToValues((item) => [
+      (item as unknown as Record<string, number>).listing_id,
+      item.provider,
+      item.provider_symbol,
     ])
     .seed();
 

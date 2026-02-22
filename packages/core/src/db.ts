@@ -117,6 +117,19 @@ export function initDb() {
             UNIQUE(market_id, symbol_code)
         );
 
+        -- Provider-specific symbol mapping for listings
+        CREATE TABLE IF NOT EXISTS listing_provider_symbol (
+            listing_provider_symbol_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            listing_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            provider_symbol TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (listing_id) REFERENCES listing(listing_id),
+            UNIQUE(listing_id, provider),
+            UNIQUE(provider, provider_symbol)
+        );
+
         -- Currency
         CREATE TABLE IF NOT EXISTS currency (
             currency_id TEXT PRIMARY KEY,

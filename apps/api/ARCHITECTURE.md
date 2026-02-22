@@ -348,6 +348,22 @@ await fastify.register(registerVersionedRoutes, {
 
 ## Standard Patterns
 
+### Canonical Symbol vs Provider Symbol
+
+The API uses a canonical internal symbol (`symbol_code`) and resolves provider-specific formats at runtime.
+
+- `symbol_code`: stable internal identifier (e.g. `EURUSD`)
+- `provider_symbol`: external provider format (e.g. Twelve `EUR/USD`)
+
+Resolution flow:
+
+1. Validate canonical symbols against `listing`.
+2. Resolve canonical → provider symbols from `listing_provider_symbol`.
+3. Query the provider with provider symbols.
+4. Normalize provider response back to canonical `symbol_code`.
+
+This avoids leaking provider-specific symbol rules into API contracts and keeps filtering/query params stable.
+
 ### Partial Failures & Embedded Errors
 
 For resources that aggregate data from multiple sources (e.g. Listings with Quotes), we use the **Wrapper Pattern** to handle partial failures gracefully without breaking the entire response.

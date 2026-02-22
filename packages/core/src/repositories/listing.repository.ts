@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 
 export interface Listing {
+  listing_id?: number;
   symbol_code: string;
   instrument_name: string;
   instrument_type: string;
@@ -30,7 +31,7 @@ export class ListingRepository {
     // Create placeholders for the IN clause
     const placeholders = symbols.map(() => "?").join(",");
     const query = `
-      SELECT symbol_code 
+      SELECT DISTINCT symbol_code
       FROM listing 
       WHERE symbol_code IN (${placeholders})
     `;
@@ -43,6 +44,170 @@ export class ListingRepository {
       return results.map((row) => row.symbol_code);
     } catch (error) {
       console.error("Error validating symbols:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves canonical symbols to provider-specific symbols.
+   * If no mapping exists for a symbol, it falls back to the canonical symbol.
+   */
+  async getProviderSymbols(symbols: string[], provider: string): Promise<Map<string, string>> {
+    const mapping = new Map<string, string>();
+    if (symbols.length === 0) {
+      return mapping;
+    }
+
+    const placeholders = symbols.map(() => "?").join(",");
+    const query = `
+      SELECT
+        l.symbol_code AS canonical_symbol,
+        COALESCE(lps.provider_symbol, l.symbol_code) AS provider_symbol
+      FROM listing l
+      LEFT JOIN listing_provider_symbol lps
+        ON lps.listing_id = l.listing_id
+       AND lps.provider = ?
+      WHERE l.symbol_code IN (${placeholders})
+    `;
+
+    try {
+      const statement = db.prepare(query);
+      const results = statement.all(provider, ...symbols) as {
+        canonical_symbol: string;
+        provider_symbol: string;
+      }[];
+
+      const rowsBySymbol = new Map<string, Set<string>>();
+      for (const row of results) {
+        if (!rowsBySymbol.has(row.canonical_symbol)) {
+          rowsBySymbol.set(row.canonical_symbol, new Set<string>());
+        }
+        rowsBySymbol.get(row.canonical_symbol)?.add(row.provider_symbol);
+      }
+
+      const ambiguousSymbols: string[] = [];
+      for (const [canonicalSymbol, providerSymbols] of rowsBySymbol) {
+        if (providerSymbols.size > 1) {
+          ambiguousSymbols.push(canonicalSymbol);
+          continue;
+        }
+        const [providerSymbol] = Array.from(providerSymbols);
+        mapping.set(canonicalSymbol, providerSymbol);
+      }
+
+      if (ambiguousSymbols.length > 0) {
+        const symbols = Array.from(new Set(ambiguousSymbols)).sort().join(", ");
+        throw new Error(
+          `Ambiguous symbols in request: ${symbols}. Provide market_mic or listing_id.`
+        );
+      }
+
+      return mapping;
+    } catch (error) {
+      console.error("Error resolving provider symbols:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves provider-specific symbols back to canonical symbols.
+   * If no mapping exists, it falls back to identity (provider_symbol === symbol_code).
+   */
+  async getCanonicalSymbols(
+    providerSymbols: string[],
+    provider: string
+  ): Promise<Map<string, string>> {
+    const mapping = new Map<string, string>();
+    if (providerSymbols.length === 0) {
+      return mapping;
+    }
+
+    const placeholders = providerSymbols.map(() => "?").join(",");
+    const query = `
+      SELECT
+        MIN(l.symbol_code) AS canonical_symbol,
+        COALESCE(lps.provider_symbol, l.symbol_code) AS provider_symbol
+      FROM listing l
+      LEFT JOIN listing_provider_symbol lps
+        ON lps.listing_id = l.listing_id
+       AND lps.provider = ?
+      WHERE COALESCE(lps.provider_symbol, l.symbol_code) IN (${placeholders})
+      GROUP BY COALESCE(lps.provider_symbol, l.symbol_code)
+    `;
+
+    try {
+      const statement = db.prepare(query);
+      const results = statement.all(provider, ...providerSymbols) as {
+        canonical_symbol: string;
+        provider_symbol: string;
+      }[];
+
+      const rowsByProviderSymbol = new Map<string, Set<string>>();
+      for (const row of results) {
+        if (!rowsByProviderSymbol.has(row.provider_symbol)) {
+          rowsByProviderSymbol.set(row.provider_symbol, new Set<string>());
+        }
+        rowsByProviderSymbol.get(row.provider_symbol)?.add(row.canonical_symbol);
+      }
+
+      for (const [providerSymbol, canonicalSymbols] of rowsByProviderSymbol) {
+        if (canonicalSymbols.size !== 1) {
+          continue;
+        }
+        const [canonicalSymbol] = Array.from(canonicalSymbols);
+        mapping.set(providerSymbol, canonicalSymbol);
+      }
+
+      return mapping;
+    } catch (error) {
+      console.error("Error resolving canonical symbols:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves listing IDs to provider-specific symbols (unambiguous by listing_id).
+   */
+  async getProviderSymbolsByListingIds(
+    listingIds: number[],
+    provider: string
+  ): Promise<Map<number, { canonicalSymbol: string; providerSymbol: string }>> {
+    const mapping = new Map<number, { canonicalSymbol: string; providerSymbol: string }>();
+    if (listingIds.length === 0) {
+      return mapping;
+    }
+
+    const placeholders = listingIds.map(() => "?").join(",");
+    const query = `
+      SELECT
+        l.listing_id,
+        l.symbol_code AS canonical_symbol,
+        COALESCE(lps.provider_symbol, l.symbol_code) AS provider_symbol
+      FROM listing l
+      LEFT JOIN listing_provider_symbol lps
+        ON lps.listing_id = l.listing_id
+       AND lps.provider = ?
+      WHERE l.listing_id IN (${placeholders})
+    `;
+
+    try {
+      const statement = db.prepare(query);
+      const results = statement.all(provider, ...listingIds) as {
+        listing_id: number;
+        canonical_symbol: string;
+        provider_symbol: string;
+      }[];
+
+      for (const row of results) {
+        mapping.set(row.listing_id, {
+          canonicalSymbol: row.canonical_symbol,
+          providerSymbol: row.provider_symbol,
+        });
+      }
+
+      return mapping;
+    } catch (error) {
+      console.error("Error resolving provider symbols by listing IDs:", error);
       throw error;
     }
   }

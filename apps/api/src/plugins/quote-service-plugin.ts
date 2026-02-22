@@ -23,7 +23,7 @@ export default fp(async (fastify: FastifyInstance) => {
     );
   }
 
-  const service = new QuoteService(provider, listingRepo);
+  const service = new QuoteService(provider, listingRepo, "twelve");
 
   fastify.decorate("quoteService", service);
 });

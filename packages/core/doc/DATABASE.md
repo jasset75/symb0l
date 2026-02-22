@@ -145,6 +145,22 @@ Links instruments to markets with specific symbols.
 |                 |              | **Constraints**                                                        |
 | `UNIQUE`        |              | `(market_id, symbol_code)` - A symbol must be unique within its market |
 
+#### Listing Provider Symbol
+
+Maps canonical internal symbols to provider-specific symbols when formats differ.
+
+| Column                       | Type         | Description                                                    |
+| ---------------------------- | ------------ | -------------------------------------------------------------- |
+| `listing_provider_symbol_id` | INTEGER (PK) | Primary key                                                    |
+| `listing_id`                 | INTEGER (FK) | Listing reference → `listing(listing_id)`                      |
+| `provider`                   | TEXT         | Provider key (e.g., `"twelve"`)                                |
+| `provider_symbol`            | TEXT         | Provider-specific symbol format (e.g., `"EUR/USD"`)            |
+| `created_at`                 | TEXT         | Record creation timestamp                                      |
+| `updated_at`                 | TEXT         | Last update timestamp                                          |
+|                              |              | **Constraints**                                                |
+| `UNIQUE`                     |              | `(listing_id, provider)` - one mapping per listing+provider    |
+| `UNIQUE`                     |              | `(provider, provider_symbol)` - provider symbol must be unique |
+
 ## Development Workflow
 
 ### Initial Setup
@@ -211,7 +227,7 @@ pnpm dev:fresh
 
 ### Seed Files
 
-- **Data**: [`src/seeds/countries.ts`](file:///Users/juan/work/symb0l/src/seeds/countries.ts), [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts), [`src/seeds/instruments.ts`](file:///Users/juan/work/symb0l/src/seeds/instruments.ts), [`src/seeds/listings.ts`](file:///Users/juan/work/symb0l/src/seeds/listings.ts)
+- **Data**: [`src/seeds/countries.ts`](file:///Users/juan/work/symb0l/src/seeds/countries.ts), [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts), [`src/seeds/instruments.ts`](file:///Users/juan/work/symb0l/src/seeds/instruments.ts), [`src/seeds/listings.ts`](file:///Users/juan/work/symb0l/src/seeds/listings.ts), [`src/seeds/listing_provider_symbols.ts`](file:///Users/juan/work/symb0l/src/seeds/listing_provider_symbols.ts)
 - **Orchestrator**: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
 
 ### Idempotency
