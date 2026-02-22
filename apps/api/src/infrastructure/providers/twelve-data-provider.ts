@@ -2,13 +2,20 @@ import {
   MarketDataProvider,
   Quote,
 } from "../../domain/interfaces/market-data-provider.js";
+import { FastifyBaseLogger } from "fastify";
 
 export class TwelveDataProvider implements MarketDataProvider {
   private baseUrl = "https://api.twelvedata.com";
 
-  constructor(private apiKey: string) {}
+  constructor(
+    private apiKey: string,
+    private readonly log?: FastifyBaseLogger,
+  ) {}
 
-  private resolveCurrency(symbol: string, payload: Record<string, unknown>): string {
+  private resolveCurrency(
+    symbol: string,
+    payload: Record<string, unknown>,
+  ): string {
     const directCurrency =
       (payload.currency as string | undefined) ||
       (payload.currency_quote as string | undefined) ||
@@ -75,7 +82,11 @@ export class TwelveDataProvider implements MarketDataProvider {
         timestamp: this.resolveTimestamp(payload),
       };
     } catch (error) {
-      console.error("Error fetching quote from TwelveData:", error);
+      if (this.log) {
+        this.log.error({ err: error }, "Error fetching quote from TwelveData");
+      } else {
+        console.error("Error fetching quote from TwelveData:", error);
+      }
       throw error;
     }
   }
@@ -126,7 +137,11 @@ export class TwelveDataProvider implements MarketDataProvider {
 
       return quotes;
     } catch (error) {
-      console.error("Error fetching quotes from TwelveData:", error);
+      if (this.log) {
+        this.log.error({ err: error }, "Error fetching quotes from TwelveData");
+      } else {
+        console.error("Error fetching quotes from TwelveData:", error);
+      }
       throw error;
     }
   }

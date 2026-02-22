@@ -1,10 +1,12 @@
 import { ListingRepository } from "@symb0l/core";
 import { QuoteService } from "./quote-service.js";
+import { FastifyBaseLogger } from "fastify";
 
 export class ListingService {
   constructor(
     private readonly listingRepository: ListingRepository,
     private readonly quoteService: QuoteService,
+    private readonly log?: FastifyBaseLogger,
   ) {}
 
   async getListings(
@@ -34,15 +36,22 @@ export class ListingService {
         let error: any = null;
 
         try {
-          quotesMap = await this.quoteService.getQuotesForListings(listingsWithIds);
+          quotesMap =
+            await this.quoteService.getQuotesForListings(listingsWithIds);
         } catch (err) {
-          console.error("Failed to fetch quotes for listings:", err);
+          if (this.log) {
+            this.log.error({ err }, "Failed to fetch quotes for listings");
+          } else {
+            console.error("Failed to fetch quotes for listings:", err);
+          }
           error = err;
         }
 
         // Attach quotes to listings
         return listings.map((listing) => {
-          const listingId = Number((listing as { listing_id?: number }).listing_id);
+          const listingId = Number(
+            (listing as { listing_id?: number }).listing_id,
+          );
           const metadataCurrency = String(
             (listing as { currency_code?: string }).currency_code ?? "",
           ).toUpperCase();
@@ -76,11 +85,19 @@ export class ListingService {
               metadataCurrency !== providerCurrency
             ) {
               if (isCurrencyPair) {
-                console.warn(
-                  `Currency mismatch ignored for FX pair ${String(
-                    (listing as { symbol_code?: string }).symbol_code ?? "",
-                  )}: metadata=${metadataCurrency}, provider=${providerCurrency}`,
-                );
+                if (this.log) {
+                  this.log.warn(
+                    `Currency mismatch ignored for FX pair ${String(
+                      (listing as { symbol_code?: string }).symbol_code ?? "",
+                    )}: metadata=${metadataCurrency}, provider=${providerCurrency}`,
+                  );
+                } else {
+                  console.warn(
+                    `Currency mismatch ignored for FX pair ${String(
+                      (listing as { symbol_code?: string }).symbol_code ?? "",
+                    )}: metadata=${metadataCurrency}, provider=${providerCurrency}`,
+                  );
+                }
               } else {
                 return {
                   ...listing,

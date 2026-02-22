@@ -11,7 +11,8 @@ import { Container } from "../infrastructure/di/container.js";
 export default fp(
   async (fastify: FastifyInstance) => {
     // Initialize the container (instantiates all dependencies in correct order)
-    const container = Container.getInstance();
+    // We pass fastify.log so domain services can use structured logging instead of console.error
+    const container = Container.getInstance(fastify.log);
 
     // Decorate fastify with the central services
     fastify.decorate("listingRepository", container.listingRepository);
