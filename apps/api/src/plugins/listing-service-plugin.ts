@@ -2,12 +2,6 @@ import fp from "fastify-plugin";
 import { FastifyInstance } from "fastify";
 import { ListingService } from "../domain/services/listing-service.js";
 
-declare module "fastify" {
-  interface FastifyInstance {
-    listingService: ListingService;
-  }
-}
-
 export default fp(
   async (fastify: FastifyInstance) => {
     // Dependencies must be registered before this plugin

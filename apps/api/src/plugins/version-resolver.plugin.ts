@@ -7,16 +7,6 @@ import {
 } from "../config/versions.config.js";
 
 /**
- * Extend Fastify instance with version utilities
- */
-declare module "fastify" {
-  interface FastifyInstance {
-    versionConfig: VersionConfig;
-    getVersionPrefixes: () => string[];
-  }
-}
-
-/**
  * Version resolver plugin
  *
  * Decorates the Fastify instance with version configuration and utilities.
