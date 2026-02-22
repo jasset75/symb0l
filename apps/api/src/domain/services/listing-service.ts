@@ -22,35 +22,38 @@ export class ListingService {
     });
 
     if (includeQuote && listings.length > 0) {
-      // Extract unique symbols from listings
-      const symbols = new Set<string>();
-      listings.forEach((l: { symbol_code: string }) => {
-        if (l.symbol_code) {
-          symbols.add(l.symbol_code);
-        }
-      });
+      const listingsWithIds = listings
+        .map((listing) => ({
+          listing_id: Number((listing as { listing_id?: number }).listing_id),
+          symbol_code: String((listing as { symbol_code: string }).symbol_code),
+        }))
+        .filter((listing) => Number.isFinite(listing.listing_id));
 
-      if (symbols.size > 0) {
+      if (listingsWithIds.length > 0) {
         let quotesMap = new Map();
         let error: any = null;
 
         try {
-          const quotes = await this.quoteService.getQuotes(Array.from(symbols));
-          quotes.forEach((q) => {
-            quotesMap.set(q.symbol, q);
-          });
+          quotesMap = await this.quoteService.getQuotesForListings(listingsWithIds);
         } catch (err) {
           console.error("Failed to fetch quotes for listings:", err);
           error = err;
         }
 
         // Attach quotes to listings
-        return listings.map((l: { symbol_code: string }) => {
-          const symbol = l.symbol_code;
+        return listings.map((listing) => {
+          const listingId = Number((listing as { listing_id?: number }).listing_id);
+          const metadataCurrency = String(
+            (listing as { currency_code?: string }).currency_code ?? "",
+          ).toUpperCase();
+          const instrumentType = String(
+            (listing as { instrument_type?: string }).instrument_type ?? "",
+          );
+          const isCurrencyPair = instrumentType === "Currency Pair";
 
           if (error) {
             return {
-              ...l,
+              ...listing,
               quote: {
                 status: "error",
                 error: {
@@ -61,19 +64,53 @@ export class ListingService {
             };
           }
 
-          const quote = quotesMap.get(symbol);
+          const quote = quotesMap.get(listingId);
           if (quote) {
+            const providerCurrency = String(
+              (quote as { currency?: string }).currency ?? "",
+            ).toUpperCase();
+
+            if (
+              metadataCurrency &&
+              providerCurrency &&
+              metadataCurrency !== providerCurrency
+            ) {
+              if (isCurrencyPair) {
+                console.warn(
+                  `Currency mismatch ignored for FX pair ${String(
+                    (listing as { symbol_code?: string }).symbol_code ?? "",
+                  )}: metadata=${metadataCurrency}, provider=${providerCurrency}`,
+                );
+              } else {
+                return {
+                  ...listing,
+                  quote: {
+                    status: "error",
+                    error: {
+                      code: "currency_mismatch",
+                      message: `Currency mismatch for ${String(
+                        (listing as { symbol_code?: string }).symbol_code ?? "",
+                      )}: metadata=${metadataCurrency}, provider=${providerCurrency}`,
+                    },
+                  },
+                };
+              }
+            }
+
             return {
-              ...l,
+              ...listing,
               quote: {
                 status: "success",
-                data: quote,
+                data: {
+                  ...quote,
+                  currency: metadataCurrency || quote.currency,
+                },
               },
             };
           }
 
           return {
-            ...l,
+            ...listing,
             quote: {
               status: "not_found",
             },

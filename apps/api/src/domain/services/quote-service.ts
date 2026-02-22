@@ -85,4 +85,48 @@ export class QuoteService {
       symbol: reverseMap.get(quote.symbol) ?? quote.symbol,
     }));
   }
+
+  async getQuotesForListings(
+    listings: Array<{ listing_id: number; symbol_code: string }>,
+  ): Promise<Map<number, Quote>> {
+    const quotesByListingId = new Map<number, Quote>();
+    if (listings.length === 0) {
+      return quotesByListingId;
+    }
+
+    const listingIds = listings.map((listing) => listing.listing_id);
+    const listingSymbolMap = await this.listingRepo.getProviderSymbolsByListingIds(
+      listingIds,
+      this.providerName,
+    );
+
+    const providerSymbolToListing = new Map<string, number>();
+    const providerSymbols: string[] = [];
+
+    for (const listing of listings) {
+      const resolved = listingSymbolMap.get(listing.listing_id);
+      const providerSymbol = resolved?.providerSymbol ?? listing.symbol_code;
+      if (!providerSymbolToListing.has(providerSymbol)) {
+        providerSymbolToListing.set(providerSymbol, listing.listing_id);
+        providerSymbols.push(providerSymbol);
+      }
+    }
+
+    const providerQuotes = await this.provider.getQuotes(providerSymbols);
+
+    for (const quote of providerQuotes) {
+      const listingId = providerSymbolToListing.get(quote.symbol);
+      if (!listingId) {
+        continue;
+      }
+
+      const resolved = listingSymbolMap.get(listingId);
+      quotesByListingId.set(listingId, {
+        ...quote,
+        symbol: resolved?.canonicalSymbol ?? quote.symbol,
+      });
+    }
+
+    return quotesByListingId;
+  }
 }
