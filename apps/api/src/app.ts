@@ -44,8 +44,9 @@ export async function buildApp() {
   // Autoload all plugins in the plugins directory
   await fastify.register(autoload, {
     dir: join(__dirname, "plugins"),
+    // Simply ignore tests and explicitly registered plugins by checking if their name is in the path
     ignorePattern:
-      /.*(?:test|spec|version-resolver\.plugin|versioned-routes\.plugin)\.ts$/,
+      /test|spec|version-resolver\.plugin|versioned-routes\.plugin/,
   });
 
   // Register Swagger
