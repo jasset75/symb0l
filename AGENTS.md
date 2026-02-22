@@ -287,6 +287,9 @@ cp apps/api/.env.example apps/api/.env
 # 3) Build workspace packages (required so apps/api uses up-to-date @symb0l/core dist)
 pnpm --filter @symb0l/core build
 pnpm --filter symb0l-api build
+
+# 4) Bootstrap the database for the new worktree
+pnpm seed
 ```
 
 Use `.env` files from the primary local workspace as the source of truth. Use `.env.example` only when no existing `.env` is available there.
