@@ -8,18 +8,25 @@ declare module "fastify" {
   }
 }
 
-export default fp(async (fastify: FastifyInstance) => {
-  // Dependencies must be registered before this plugin
-  const listingRepo = fastify.listingRepository;
-  const quoteService = fastify.quoteService;
+export default fp(
+  async (fastify: FastifyInstance) => {
+    // Dependencies must be registered before this plugin
+    const listingRepo = fastify.listingRepository;
+    const quoteService = fastify.quoteService;
 
-  if (!listingRepo || !quoteService) {
-    throw new Error(
-      "Dependencies not met. Ensure repository-plugin and quote-service-plugin are registered.",
-    );
-  }
+    if (!listingRepo || !quoteService) {
+      throw new Error(
+        "Dependencies not met. Ensure repository-plugin and quote-service-plugin are registered.",
+      );
+    }
 
-  const service = new ListingService(listingRepo, quoteService);
+    const service = new ListingService(listingRepo, quoteService);
 
-  fastify.decorate("listingService", service);
-});
+    fastify.decorate("listingService", service);
+  },
+  {
+    name: "listing-service-plugin",
+    fastify: "5.x",
+    dependencies: ["repository-plugin", "quote-service-plugin"],
+  },
+);

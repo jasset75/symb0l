@@ -9,21 +9,28 @@ declare module "fastify" {
   }
 }
 
-export default fp(async (fastify: FastifyInstance) => {
-  const apiKey = process.env.TWELVE_DATA_API_KEY || "";
+export default fp(
+  async (fastify: FastifyInstance) => {
+    const apiKey = process.env.TWELVE_DATA_API_KEY || "";
 
-  // Composition Root
-  const provider = new TwelveDataProvider(apiKey);
-  // Relies on repository-plugin being registered before this
-  const listingRepo = fastify.listingRepository;
+    // Composition Root
+    const provider = new TwelveDataProvider(apiKey);
+    // Relies on repository-plugin being registered before this
+    const listingRepo = fastify.listingRepository;
 
-  if (!listingRepo) {
-    throw new Error(
-      "ListingRepository not found. Ensure repository-plugin is registered.",
-    );
-  }
+    if (!listingRepo) {
+      throw new Error(
+        "ListingRepository not found. Ensure repository-plugin is registered.",
+      );
+    }
 
-  const service = new QuoteService(provider, listingRepo);
+    const service = new QuoteService(provider, listingRepo);
 
-  fastify.decorate("quoteService", service);
-});
+    fastify.decorate("quoteService", service);
+  },
+  {
+    name: "quote-service-plugin",
+    fastify: "5.x",
+    dependencies: ["repository-plugin"],
+  },
+);
