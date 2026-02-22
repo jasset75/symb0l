@@ -1,53 +1,23 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
+import { major } from "semver";
 import {
   createVersionConfig,
   getVersionPrefixes,
   resolveVersion,
   getVersionStatus,
+  latestPatchFor,
   VersionStatus,
-  parseVersion,
 } from "./versions.config.js";
 
 describe("Version Configuration", () => {
-  describe("parseVersion", () => {
-    it("should parse valid semantic version", () => {
-      const version = parseVersion("1.2.3");
-      assert.strictEqual(version.major, 1);
-      assert.strictEqual(version.minor, 2);
-      assert.strictEqual(version.patch, 3);
-      assert.strictEqual(version.full, "1.2.3");
-    });
-
-    it("should parse version with zeros", () => {
-      const version = parseVersion("0.0.1");
-      assert.strictEqual(version.major, 0);
-      assert.strictEqual(version.minor, 0);
-      assert.strictEqual(version.patch, 1);
-    });
-
-    it("should throw on invalid version format", () => {
-      assert.throws(() => parseVersion("1.2"), {
-        message: /Invalid semantic version format/,
-      });
-      assert.throws(() => parseVersion("v1.2.3"), {
-        message: /Invalid semantic version format/,
-      });
-      assert.throws(() => parseVersion("1.2.3-beta"), {
-        message: /Invalid semantic version format/,
-      });
-    });
-  });
-
   describe("createVersionConfig", () => {
     it("should create config from API_VERSION_CONFIG", () => {
       const config = createVersionConfig();
 
-      assert.ok(config.stableVersion);
-      assert.ok(typeof config.stableVersion.major === "number");
-      assert.ok(typeof config.stableVersion.minor === "number");
-      assert.ok(typeof config.stableVersion.patch === "number");
-      assert.ok(config.stableVersion.full);
+      assert.ok(config.stable);
+      assert.ok(typeof config.stable === "string");
+      assert.ok(config.allVersions.length > 0);
     });
 
     it("should have apiVersions", () => {
@@ -59,17 +29,14 @@ describe("Version Configuration", () => {
       assert.ok(Array.isArray(config.apiVersions.supported));
     });
 
-    it("should have supportedVersions array", () => {
+    it("should have allVersions combining supported + deprecated + sunsetted", () => {
       const config = createVersionConfig();
+      assert.ok(Array.isArray(config.allVersions));
+      assert.ok(config.allVersions.length > 0);
 
-      assert.ok(Array.isArray(config.supportedVersions));
-      assert.ok(config.supportedVersions.length > 0);
-    });
-
-    it("should have deprecatedVersions map", () => {
-      const config = createVersionConfig();
-
-      assert.ok(config.deprecatedVersions instanceof Map);
+      for (const v of config.apiVersions.supported) {
+        assert.ok(config.allVersions.includes(v));
+      }
     });
   });
 
@@ -78,7 +45,7 @@ describe("Version Configuration", () => {
       const config = createVersionConfig();
       const resolved = resolveVersion("", config);
 
-      assert.strictEqual(resolved, config.stableVersion.full);
+      assert.strictEqual(resolved, config.stable);
     });
 
     it("should resolve alias to specific version", () => {
@@ -101,7 +68,7 @@ describe("Version Configuration", () => {
 
     it("should handle version with or without v prefix", () => {
       const config = createVersionConfig();
-      const version = config.stableVersion.full;
+      const version = config.stable;
 
       const withV = resolveVersion(`v${version}`, config);
       const withoutV = resolveVersion(version, config);
@@ -110,18 +77,25 @@ describe("Version Configuration", () => {
     });
   });
 
+  describe("latestPatchFor", () => {
+    it("should resolve minor alias to latest patch", () => {
+      const config = createVersionConfig();
+      const result = latestPatchFor("0.2", config);
+      assert.strictEqual(result, "0.2.0");
+    });
+
+    it("should return null for unknown minor", () => {
+      const config = createVersionConfig();
+      const result = latestPatchFor("9.9", config);
+      assert.strictEqual(result, null);
+    });
+  });
+
   describe("getVersionStatus", () => {
     it("should identify stable version", () => {
       const config = createVersionConfig();
-      const status = getVersionStatus(config.stableVersion.full, config);
+      const status = getVersionStatus(config.stable, config);
 
-      assert.strictEqual(status, VersionStatus.STABLE);
-    });
-
-    it("should identify supported version", () => {
-      const config = createVersionConfig();
-      // 0.2.0 is stable, which is also supported
-      const status = getVersionStatus("0.2.0", config);
       assert.strictEqual(status, VersionStatus.STABLE);
     });
 

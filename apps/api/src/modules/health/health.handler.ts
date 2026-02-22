@@ -10,8 +10,8 @@ export async function handleHealthV1(
   return {
     status: "ok",
     service: "Symb0l API",
-    version: versionConfig.stableVersion.full,
-    stableVersion: versionConfig.stableVersion.full,
+    version: versionConfig.stable,
+    stableVersion: versionConfig.stable,
     supportedVersions: [...versionConfig.apiVersions.supported],
     deprecatedVersions: versionConfig.apiVersions.deprecated,
     timestamp: new Date().toISOString(),
@@ -28,10 +28,10 @@ export async function handleHealthV2(
     status: "healthy",
     api: {
       name: "Symb0l API",
-      version: versionConfig.stableVersion.full,
+      version: versionConfig.stable,
     },
     versions: {
-      stable: versionConfig.stableVersion.full,
+      stable: versionConfig.stable,
       supported: [...versionConfig.apiVersions.supported],
       deprecated: Object.keys(versionConfig.apiVersions.deprecated),
       sunsetted: [...versionConfig.apiVersions.sunsetted],

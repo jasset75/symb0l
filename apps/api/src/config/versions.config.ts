@@ -1,14 +1,5 @@
+import { gt, minor, major, valid } from "semver";
 import { API_VERSION_CONFIG } from "./api-version.config.js";
-
-/**
- * Semantic version structure
- */
-export interface SemanticVersion {
-  major: number;
-  minor: number;
-  patch: number;
-  full: string;
-}
 
 /**
  * Deprecation information for a version
@@ -44,191 +35,131 @@ export enum VersionStatus {
  * Version configuration for API versioning
  */
 export interface VersionConfig {
-  /** API version configuration */
+  /** Raw API version configuration */
   apiVersions: ApiVersionConfig;
-  /** Current stable version */
-  stableVersion: SemanticVersion;
-  /** All supported versions (parsed) */
-  supportedVersions: SemanticVersion[];
-  /** All deprecated versions (parsed) */
-  deprecatedVersions: Map<string, DeprecatedVersionInfo>;
+  /** Current stable version string */
+  stable: string;
+  /** All known full versions: supported + deprecated + sunsetted */
+  allVersions: string[];
 }
 
 /**
- * Parse semantic version string into components
- */
-export function parseVersion(versionString: string): SemanticVersion {
-  const match = versionString.match(/^(\d+)\.(\d+)\.(\d+)$/);
-  if (!match) {
-    throw new Error(
-      `Invalid semantic version format: ${versionString}. Expected format: X.Y.Z`,
-    );
-  }
-
-  return {
-    major: parseInt(match[1], 10),
-    minor: parseInt(match[2], 10),
-    patch: parseInt(match[3], 10),
-    full: versionString,
-  };
-}
-
-/**
- * Create version configuration from TypeScript config
- *
+ * Create version configuration from the static config file.
  * This is the single source of truth for API versioning.
  */
 export function createVersionConfig(): VersionConfig {
   const apiVersions = API_VERSION_CONFIG as ApiVersionConfig;
 
-  const stableVersion = parseVersion(apiVersions.stable);
-  const supportedVersions = apiVersions.supported.map(parseVersion);
-  const deprecatedVersions = new Map(Object.entries(apiVersions.deprecated));
+  const allVersions = [
+    ...apiVersions.supported,
+    ...Object.keys(apiVersions.deprecated),
+    ...apiVersions.sunsetted,
+  ];
 
   return {
     apiVersions,
-    stableVersion,
-    supportedVersions,
-    deprecatedVersions,
+    stable: apiVersions.stable,
+    allVersions: [...new Set(allVersions)],
   };
 }
 
 /**
- * Resolve a version string to its actual version
+ * Find the latest patch version for a given major.minor among all known versions.
  *
- * @param versionString - Version string from URL (e.g., 'v1', 'v1.2.0', or empty for default)
+ * @example latestPatchFor("0.2", config) // "0.2.0"
+ */
+export function latestPatchFor(
+  majorMinor: string,
+  config: VersionConfig,
+): string | null {
+  return config.allVersions
+    .filter(
+      (v) =>
+        major(v) === major(majorMinor + ".0") &&
+        minor(v) === minor(majorMinor + ".0"),
+    )
+    .reduce<
+      string | null
+    >((latest, v) => (latest === null || gt(v, latest) ? v : latest), null);
+}
+
+/**
+ * Resolve a version string from a URL to its full semver version.
+ *
+ * Handles:
+ * - Empty string → stable version
+ * - Static alias (e.g. "v0") → aliased version
+ * - Exact version (e.g. "v0.2.0") → that version if known
+ * - Minor alias (e.g. "v0.2") → latest 0.2.x patch
+ *
+ * @param versionString - Version string from URL (e.g., 'v0', 'v0.2', 'v0.2.0', or '')
  * @param config - Version configuration
- * @returns Resolved version string (e.g., '1.2.0')
+ * @returns Resolved semver string (e.g., '0.2.0')
  */
 export function resolveVersion(
   versionString: string,
   config: VersionConfig,
 ): string {
-  // Default (empty) -> stable version
-  if (!versionString || versionString === "") {
-    return config.stableVersion.full;
+  if (!versionString) {
+    return config.stable;
   }
 
-  // Remove 'v' prefix if present
-  const normalized = versionString.startsWith("v")
+  // Ensure 'v' prefix for alias lookups
+  const withPrefix = versionString.startsWith("v")
     ? versionString
     : `v${versionString}`;
+  const bare = withPrefix.slice(1);
 
-  // Check if it's an alias (e.g., 'v1')
-  if (config.apiVersions.aliases[normalized]) {
-    return config.apiVersions.aliases[normalized];
+  // 1. Static alias (e.g. "v0" → "0.2.0")
+  if (config.apiVersions.aliases[withPrefix]) {
+    return config.apiVersions.aliases[withPrefix];
   }
 
-  // Check if it's an exact version (e.g., 'v1.2.0')
-  const exactVersion = normalized.substring(1); // Remove 'v'
-  if (
-    config.apiVersions.supported.includes(exactVersion) ||
-    config.apiVersions.deprecated[exactVersion]
-  ) {
-    return exactVersion;
+  // 2. Exact known version (e.g. "v0.2.0")
+  if (valid(bare) && config.allVersions.includes(bare)) {
+    return bare;
   }
 
-  // Unknown version - return as-is and let caller handle
-  return exactVersion;
+  // 3. Minor alias (e.g. "v0.2" → latest 0.2.x)
+  if (/^\d+\.\d+$/.test(bare)) {
+    return latestPatchFor(bare, config) ?? bare;
+  }
+
+  // Unknown — pass through and let caller handle
+  return bare;
 }
 
 /**
- * Extract semantic version string from a route prefix
+ * Get the status of a resolved full version string.
  *
- * @param versionPrefix - Prefix used in route (e.g., 'v0.2.0', 'v0', or '')
+ * @param version - Full semver string (e.g., '0.2.0')
  * @param config - Version configuration
- * @returns Semantic version string (e.g., '0.2.0' or stable version)
- */
-export function extractVersionFromPrefix(
-  versionPrefix: string,
-  config: VersionConfig,
-): string {
-  if (!versionPrefix) {
-    return config.stableVersion.full;
-  }
-
-  if (config.apiVersions.aliases && config.apiVersions.aliases[versionPrefix]) {
-    return config.apiVersions.aliases[versionPrefix];
-  }
-
-  return versionPrefix.substring(1);
-}
-
-/**
- * Get the status of a version
- *
- * @param version - Version string (e.g., '1.2.0')
- * @param config - Version configuration
- * @returns Version status
  */
 export function getVersionStatus(
   version: string,
   config: VersionConfig,
 ): VersionStatus {
-  if (version === config.stableVersion.full) {
-    return VersionStatus.STABLE;
-  }
-
-  if (config.apiVersions.sunsetted.includes(version)) {
+  if (version === config.stable) return VersionStatus.STABLE;
+  if (config.apiVersions.sunsetted.includes(version))
     return VersionStatus.SUNSETTED;
-  }
-
-  if (config.apiVersions.deprecated[version]) {
-    return VersionStatus.DEPRECATED;
-  }
-
-  if (config.apiVersions.supported.includes(version)) {
+  if (config.apiVersions.deprecated[version]) return VersionStatus.DEPRECATED;
+  if (config.apiVersions.supported.includes(version))
     return VersionStatus.SUPPORTED;
-  }
-
   return VersionStatus.UNKNOWN;
 }
 
 /**
- * Get all version prefixes that should be registered
- * Returns all supported and deprecated versions, plus aliases
+ * Get all route prefixes that should be registered by the versioned routes plugin.
  *
- * Example:
- * - 'v0.1.0' (exact supported)
- * - 'v1.0.0' (exact deprecated)
- * - 'v0' (alias)
- * - '' (default, resolves to stable)
+ * Returns exact version prefixes (vX.Y.Z), dynamic minor aliases (vX.Y),
+ * static aliases (e.g. v0), and the default empty string.
  */
 export function getVersionPrefixes(config: VersionConfig): string[] {
-  const prefixes: string[] = [];
+  const exact = config.allVersions.map((v) => `v${v}`);
 
-  // Add all supported versions
-  // Note: Deprecated versions may overlap with supported (deprecation flow)
-  // So we track what we've added to avoid duplicates
-  for (const version of config.apiVersions.supported) {
-    prefixes.push(`v${version}`);
-  }
+  const minors = config.allVersions.map((v) => `v${major(v)}.${minor(v)}`);
 
-  // Add deprecated versions that aren't already in supported
-  for (const version of Object.keys(config.apiVersions.deprecated)) {
-    const prefix = `v${version}`;
-    if (!prefixes.includes(prefix)) {
-      prefixes.push(prefix);
-    }
-  }
+  const aliases = Object.keys(config.apiVersions.aliases);
 
-  // Add sunsetted versions that aren't already added
-  for (const version of config.apiVersions.sunsetted) {
-    const prefix = `v${version}`;
-    if (!prefixes.includes(prefix)) {
-      prefixes.push(prefix);
-    }
-  }
-
-  // Add all aliases
-  for (const alias of Object.keys(config.apiVersions.aliases)) {
-    if (!prefixes.includes(alias)) {
-      prefixes.push(alias);
-    }
-  }
-
-  // Add default (empty string)
-  prefixes.push("");
-
-  return prefixes;
+  return [...new Set([...exact, ...minors, ...aliases, ""])];
 }
