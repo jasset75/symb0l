@@ -24,6 +24,9 @@ export async function getQuote(
     if (error instanceof Error && error.message.includes("Symbols not found")) {
       return reply.notFound(error.message);
     }
+    if (error instanceof Error && error.message.includes("Ambiguous symbols")) {
+      return reply.badRequest(error.message);
+    }
     return reply.badGateway("Failed to fetch quote from upstream provider");
   }
 }
@@ -54,6 +57,9 @@ export async function getQuotesBatch(
     request.log.error(error);
     if (error instanceof Error && error.message.includes("Symbols not found")) {
       return reply.notFound(error.message);
+    }
+    if (error instanceof Error && error.message.includes("Ambiguous symbols")) {
+      return reply.badRequest(error.message);
     }
     return reply.badGateway("Failed to fetch quotes from upstream provider");
   }

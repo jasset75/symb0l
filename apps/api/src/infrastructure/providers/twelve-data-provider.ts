@@ -8,6 +8,42 @@ export class TwelveDataProvider implements MarketDataProvider {
 
   constructor(private apiKey: string) {}
 
+  private resolveCurrency(symbol: string, payload: Record<string, unknown>): string {
+    const directCurrency =
+      (payload.currency as string | undefined) ||
+      (payload.currency_quote as string | undefined) ||
+      (payload.quote_currency as string | undefined);
+
+    if (directCurrency && directCurrency.trim().length > 0) {
+      return directCurrency;
+    }
+
+    // FX fallback: symbols like EUR/USD -> quote currency USD
+    const slashSeparated = symbol.split("/");
+    if (slashSeparated.length === 2 && slashSeparated[1]) {
+      return slashSeparated[1].toUpperCase();
+    }
+
+    return "N/A";
+  }
+
+  private resolveTimestamp(payload: Record<string, unknown>): string {
+    const rawTimestamp = payload.timestamp;
+
+    if (typeof rawTimestamp === "number") {
+      return new Date(rawTimestamp * 1000).toISOString();
+    }
+
+    if (typeof rawTimestamp === "string") {
+      const asNumber = Number(rawTimestamp);
+      if (Number.isFinite(asNumber)) {
+        return new Date(asNumber * 1000).toISOString();
+      }
+    }
+
+    return new Date().toISOString();
+  }
+
   async getQuote(symbol: string): Promise<Quote | null> {
     try {
       if (!this.apiKey) {
@@ -22,19 +58,21 @@ export class TwelveDataProvider implements MarketDataProvider {
         throw new Error(`Twelve Data API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const dataJson = await response.json();
 
-      if (data.code && data.code !== 200) {
-        throw new Error(`Twelve Data API error: ${data.message}`);
+      if (dataJson.code && dataJson.code !== 200) {
+        throw new Error(`Twelve Data API error: ${dataJson.message}`);
       }
 
-      if (!data.symbol) return null;
+      if (!dataJson.symbol) return null;
+      const payload = dataJson as Record<string, unknown>;
+      const resolvedSymbol = String(payload.symbol);
 
       return {
-        symbol: data.symbol,
-        price: parseFloat(data.close),
-        currency: data.currency,
-        timestamp: new Date(data.timestamp * 1000).toISOString(),
+        symbol: resolvedSymbol,
+        price: parseFloat(String(payload.close)),
+        currency: this.resolveCurrency(resolvedSymbol, payload),
+        timestamp: this.resolveTimestamp(payload),
       };
     } catch (error) {
       console.error("Error fetching quote from TwelveData:", error);
@@ -73,14 +111,15 @@ export class TwelveDataProvider implements MarketDataProvider {
       const quotes: Quote[] = [];
 
       for (const key of Object.keys(data)) {
-        const item = data[key];
+        const item = data[key] as Record<string, unknown>;
         // Check if individual item has error or valid data
         if (item.symbol && item.close) {
+          const symbol = String(item.symbol);
           quotes.push({
-            symbol: item.symbol,
-            price: parseFloat(item.close),
-            currency: item.currency,
-            timestamp: new Date(item.timestamp * 1000).toISOString(),
+            symbol,
+            price: parseFloat(String(item.close)),
+            currency: this.resolveCurrency(symbol, item),
+            timestamp: this.resolveTimestamp(item),
           });
         }
       }

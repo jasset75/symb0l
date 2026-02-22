@@ -266,6 +266,31 @@ To keep the workspace clean and avoid switching branches in the main directory, 
    git worktree remove .worktrees/feature-add-new-data
    ```
 
+### Worktree Bootstrap (Required)
+
+After creating a new worktree, you **MUST** initialize environment files and build artifacts before running services/tests.
+
+From the worktree root (example: `.worktrees/feature-add-new-data`):
+
+```bash
+# 1) Install deps in the worktree
+pnpm install
+
+# 2) Copy env files used by core and API (PRIORITY: copy from main local workspace, not from another worktree)
+cp /path/to/main/workspace/packages/core/.env packages/core/.env
+cp /path/to/main/workspace/apps/api/.env apps/api/.env
+
+# Fallback only if main-workspace .env files do not exist:
+cp packages/core/.env.example packages/core/.env
+cp apps/api/.env.example apps/api/.env
+
+# 3) Build workspace packages (required so apps/api uses up-to-date @symb0l/core dist)
+pnpm --filter @symb0l/core build
+pnpm --filter symb0l-api build
+```
+
+Use `.env` files from the primary local workspace as the source of truth. Use `.env.example` only when no existing `.env` is available there.
+
 ### Agent & Editor Workflow
 
 When using worktrees, treat each worktree as a **separate workspace**.

@@ -8,17 +8,19 @@ type SqliteValue = string | number | null;
 /**
  * Foreign key resolution configuration
  */
+interface ForeignKeyFilter<T> {
+  column: string;
+  valueExtractor: (item: T) => SqliteValue;
+}
+
 /**
  * Foreign key resolution configuration
  */
 interface ForeignKeyResolution<T> {
-  // Input: Get the value to search for
-  sourceFieldExtractor: (item: T) => string | number | null;
-
   // Lookup: Where to search
   table: string;
-  filterColumn: string;
   valueColumn: string;
+  filters: ForeignKeyFilter<T>[];
 
   // Output: Where to store the result
   targetField: string;
@@ -48,7 +50,12 @@ interface ForeignKeyResolution<T> {
  *   .entity("markets")
  *   .sql("INSERT OR REPLACE INTO market (code, name, exchange_id) VALUES (?, ?, ?)")
  *   .data(markets)
- *   .resolveForeignKey("exchange_id", "exchange", "exchange_id", "code", (item) => item.exchange_code)
+ *   .resolveForeignKey({
+ *     table: "exchange",
+ *     valueColumn: "exchange_id",
+ *     filters: [{ column: "code", valueExtractor: (item) => item.exchange_code }],
+ *     targetField: "exchange_id",
+ *   })
  *   .mapToValues((item) => [item.code, item.name, item.exchange_id])
  *   .seed();
  */
@@ -104,20 +111,18 @@ export class SeederBuilder<T extends object> {
    * This method can be called multiple times to resolve multiple foreign keys.
    *
    * @param config - Configuration object for foreign key resolution
-   * @param config.sourceFieldExtractor - Function to extract the search value from the current seed item
    * @param config.table - Database table to query for the ID (e.g., 'currency')
-   * @param config.filterColumn - Column in the target table to search by (e.g., 'code3')
    * @param config.valueColumn - Column name of the value to retrieve (e.g., 'currency_id')
+   * @param config.filters - One or more filter descriptors for simple/composite key lookups
    * @param config.targetField - Field name where the resolved ID will be stored in the item (e.g., 'currency_id')
    * @param config.optional - If true, returns null if the lookup fails instead of throwing an error
    * @returns this builder instance for chaining
    *
    * @example
    * .resolveForeignKey({
-   *   sourceFieldExtractor: (item) => item.market_prefix,
    *   table: "market",
-   *   filterColumn: "ticker_prefix",
    *   valueColumn: "market_id",
+   *   filters: [{ column: "ticker_prefix", valueExtractor: (item) => item.market_prefix }],
    *   targetField: "market_id",
    * })
    */
@@ -195,15 +200,21 @@ export class SeederBuilder<T extends object> {
     const result: Record<string, unknown> = { ...(item as Record<string, unknown>) };
 
     for (const resolution of this.foreignKeyResolutions) {
-      const sourceValue = resolution.sourceFieldExtractor(item);
+      const filters = resolution.filters.map((filter) => ({
+        column: filter.column,
+        value: filter.valueExtractor(result as T),
+      }));
 
-      // If source value is null/empty and optional, skip lookup
-      if ((sourceValue === null || sourceValue === "") && resolution.optional) {
+      // If any source value is null/empty and optional, skip lookup
+      const hasEmptyFilterValue = filters.some(
+        (filter) => filter.value === null || filter.value === ""
+      );
+      if (hasEmptyFilterValue && resolution.optional) {
         result[resolution.targetField] = null;
         continue;
       }
 
-      if (sourceValue === null || sourceValue === undefined) {
+      if (filters.some((filter) => filter.value === null || filter.value === undefined)) {
         throw new Error(
           `SeederBuilder: Source value for ${resolution.table} lookup is null/undefined, but not marked optional.`
         );
@@ -212,9 +223,8 @@ export class SeederBuilder<T extends object> {
       const resolvedId = this.resolveForeignKeyValue(
         resolution.table,
         resolution.valueColumn,
-        resolution.filterColumn,
-        sourceValue,
-        resolution.optional
+        resolution.optional,
+        filters as { column: string; value: string | number }[]
       );
       result[resolution.targetField] = resolvedId;
     }
@@ -229,19 +239,29 @@ export class SeederBuilder<T extends object> {
   private resolveForeignKeyValue(
     table: string,
     valueColumn: string,
-    filterColumn: string,
-    filterValue: string | number,
-    optional: boolean = false
-  ): number | null {
+    optional: boolean = false,
+    filters: { column: string; value: string | number }[]
+  ): SqliteValue {
+    if (filters.length === 0) {
+      throw new Error(`SeederBuilder: At least one filter is required for ${table} lookup.`);
+    }
+
+    const whereClause = filters.map((filter) => `${filter.column} = ?`).join(" AND ");
+    const params = filters.map((filter) => filter.value);
     const result = this.db
-      .prepare(`SELECT ${valueColumn} FROM ${table} WHERE ${filterColumn} = ?`)
-      .get(filterValue) as Record<string, number> | undefined;
+      .prepare(`SELECT ${valueColumn} FROM ${table} WHERE ${whereClause}`)
+      .get(...params) as Record<string, SqliteValue> | undefined;
 
     if (!result) {
       if (optional) {
         return null;
       }
-      throw new Error(`${table}: ${filterColumn}='${filterValue}' not found`);
+      const keyDescription = filters.map((f) => `${f.column}='${f.value}'`).join(", ");
+      throw new Error(`${table}: ${keyDescription} not found`);
+    }
+
+    if (!(valueColumn in result)) {
+      throw new Error(`${table}: value column '${valueColumn}' not found in lookup result`);
     }
 
     return result[valueColumn];

@@ -32,6 +32,16 @@ const mockDependenciesPlugin = fp(async (fastify) => {
       // Simulate that "INVALID" and "MISSING" are not in DB
       return symbols.filter((s) => s !== "INVALID" && s !== "MISSING");
     },
+    getProviderSymbols: async (symbols: string[]) => {
+      const mapping = new Map<string, string>();
+      symbols.forEach((symbol) => mapping.set(symbol, symbol));
+      return mapping;
+    },
+    getCanonicalSymbols: async (providerSymbols: string[]) => {
+      const mapping = new Map<string, string>();
+      providerSymbols.forEach((symbol) => mapping.set(symbol, symbol));
+      return mapping;
+    },
   };
 
   const service = new QuoteService(

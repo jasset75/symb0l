@@ -18,7 +18,7 @@ export default fp(
       );
     }
 
-    const service = new QuoteService(provider, listingRepo);
+    const service = new QuoteService(provider, listingRepo, "twelve");
 
     fastify.decorate("quoteService", service);
   },
