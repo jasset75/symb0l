@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import Fastify, { FastifyInstance } from "fastify";
+import { major } from "semver";
 import fp from "fastify-plugin";
 import sensible from "@fastify/sensible";
 import { quoteRoutes } from "./index.js";
@@ -79,7 +80,7 @@ describe("Quote Routes - Version Integration", () => {
 
   describe("Version Access Patterns", () => {
     it("should respond on exact version endpoint", async () => {
-      const version = app.versionConfig.stableVersion.full;
+      const version = app.versionConfig.stable;
       const response = await app.inject({
         method: "GET",
         url: `/v${version}/quotes/AAPL`,
@@ -91,7 +92,7 @@ describe("Quote Routes - Version Integration", () => {
     });
 
     it("should respond on major version endpoint", async () => {
-      const majorVersion = app.versionConfig.stableVersion.major;
+      const majorVersion = major(app.versionConfig.stable);
       const response = await app.inject({
         method: "GET",
         url: `/v${majorVersion}/quotes/AAPL`,
@@ -114,8 +115,8 @@ describe("Quote Routes - Version Integration", () => {
     });
 
     it("should return identical responses across all version patterns", async () => {
-      const version = app.versionConfig.stableVersion.full;
-      const majorVersion = app.versionConfig.stableVersion.major;
+      const version = app.versionConfig.stable;
+      const majorVersion = major(app.versionConfig.stable);
 
       const [exactResponse, majorResponse, defaultResponse] = await Promise.all(
         [
@@ -142,8 +143,8 @@ describe("Quote Routes - Version Integration", () => {
 
   describe("Error Handling Across Versions", () => {
     it("should return 404 for invalid symbol on all endpoints", async () => {
-      const version = app.versionConfig.stableVersion.full;
-      const majorVersion = app.versionConfig.stableVersion.major;
+      const version = app.versionConfig.stable;
+      const majorVersion = major(app.versionConfig.stable);
 
       const [exactResponse, majorResponse, defaultResponse] = await Promise.all(
         [

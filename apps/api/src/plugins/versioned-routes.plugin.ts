@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { gte } from "semver";
-import { extractVersionFromPrefix } from "../config/versions.config.js";
+import { resolveVersion } from "../config/versions.config.js";
 
 interface VersionedRouteOptions extends FastifyPluginOptions {
   /**
@@ -44,23 +44,13 @@ export async function registerVersionedRoutes(
   const { basePath, routePlugin, versionOptions = {}, minVersion } = opts;
 
   const versionPrefixes = fastify.getVersionPrefixes();
-  const stableVersion = fastify.versionConfig.stableVersion.full;
+  const canonicalPrefix = `v${fastify.versionConfig.stable}`;
 
-  // Find the canonical prefix (stable version)
-  const canonicalPrefix = `v${stableVersion}`;
-
-  for (let i = 0; i < versionPrefixes.length; i++) {
-    const versionPrefix = versionPrefixes[i];
+  for (const versionPrefix of versionPrefixes) {
     const isCanonical = versionPrefix === canonicalPrefix;
 
-    // Extract version from prefix mechanism
-    // 1. If prefix is empty, use stable version
-    // 2. If prefix is an alias (e.g. "v0"), resolve it via config
-    // 3. Otherwise assume it's "vX.Y.Z" and strip the 'v'
-    const versionString = extractVersionFromPrefix(
-      versionPrefix,
-      fastify.versionConfig,
-    );
+    // Resolve what full version this prefix maps to
+    const versionString = resolveVersion(versionPrefix, fastify.versionConfig);
 
     // Check minVersion constraint
     if (minVersion && !gte(versionString, minVersion)) {
@@ -68,34 +58,25 @@ export async function registerVersionedRoutes(
     }
 
     // Build full prefix
-    // For quotes: /v0.2.0/quotes
-    // For health: /v0.2.0 (health defines /health internally)
     const fullPrefix = versionPrefix
       ? `/${versionPrefix}${basePath}`
       : basePath;
 
-    // Pass version to route plugin (empty string for default route seems to be the pattern)
-    // But wait, previous logic passed empty string?
-    // "const version = versionPrefix ? versionPrefix.substring(1) : "";"
     const version = versionPrefix ? versionPrefix.substring(1) : "";
 
     // Get version-specific options if provided
-    const versionSpecificOpts = version ? versionOptions[version] || {} : {};
+    const versionSpecificOpts = version ? (versionOptions[version] ?? {}) : {};
 
     // Register route
     await fastify.register(routePlugin, {
       prefix: fullPrefix,
-      hideFromSwagger: !isCanonical, // Hide everything except canonical
-      version, // Pass version to route plugin
+      hideFromSwagger: !isCanonical,
+      version,
       ...versionSpecificOpts,
     });
 
-    const swaggerStatus = isCanonical
-      ? "(documented in Swagger)"
-      : "(hidden from Swagger)";
-
     fastify.log.info(
-      `Registered ${basePath} at: ${fullPrefix} ${swaggerStatus}`,
+      `Registered ${basePath} at: ${fullPrefix} ${isCanonical ? "(documented in Swagger)" : "(hidden from Swagger)"}`,
     );
   }
 }

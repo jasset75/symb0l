@@ -17,7 +17,7 @@ export default fp(
         info: {
           title: "Symb0l API",
           description: "API for Symb0l",
-          version: fastify.versionConfig.stableVersion.full,
+          version: fastify.versionConfig.stable,
         },
         servers: [
           {

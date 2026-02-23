@@ -24,7 +24,7 @@ const versionResolverPlugin: FastifyPluginAsync = async (fastify) => {
   // Log version information on startup
   fastify.log.info(
     {
-      stableVersion: config.stableVersion.full,
+      stable: config.stable,
       supportedVersions: config.apiVersions.supported,
       deprecatedVersions: Object.keys(config.apiVersions.deprecated),
       aliases: config.apiVersions.aliases,

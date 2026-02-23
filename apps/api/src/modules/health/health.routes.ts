@@ -26,7 +26,7 @@ export async function healthRoutes(
   fastify: FastifyInstance,
   opts: HealthRoutesOptions & { hideFromSwagger?: boolean },
 ) {
-  const defaultVersion = fastify.versionConfig.stableVersion.full;
+  const defaultVersion = fastify.versionConfig.stable;
   const { version = defaultVersion, hideFromSwagger } = opts;
   const server = fastify.withTypeProvider<TypeBoxTypeProvider>();
 
