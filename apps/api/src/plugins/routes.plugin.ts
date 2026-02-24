@@ -39,6 +39,6 @@ export default fp(
   {
     name: "routes-plugin",
     fastify: "5.x",
-    dependencies: ["version-resolver", "di-plugin"], // Requires DI and Versioning
+    dependencies: ["version-resolver", "di-plugin", "swagger-plugin"], // Requires DI, Versioning, and Swagger (so onRoute hook is registered before routes)
   },
 );
