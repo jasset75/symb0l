@@ -22,17 +22,14 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git config --global push.autoSetupRemote true
           git checkout -b chore/update-game-gif
+          git push -u origin chore/update-game-gif
 
       - uses: czl9707/gh-space-shooter@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           output-path: "game.gif"
           strategy: "random"
-
-      - name: Push changes
-        run: git push -f origin chore/update-game-gif
 
       - name: Create Pull Request
         run: |
