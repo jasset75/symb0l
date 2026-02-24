@@ -37,7 +37,6 @@ jobs:
             --title "chore: update space shooter game gif" \
             --body "Automated update of the space shooter game GIF." \
             --base main \
-            --head chore/update-game-gif \
-            --label "automated"
+            --head chore/update-game-gif
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
