@@ -235,6 +235,11 @@ Implementation notes:
 
 ## Adding a New Endpoint
 
+Before implementation, apply this checklist when needed:
+- New service/dependency: instantiate in `src/infrastructure/di/container.ts`, decorate in `src/plugins/di.plugin.ts`, and declare type in `src/types/fastify.d.ts`.
+- New initialization plugin: place it in `src/plugins/` and declare `dependencies` in `fp(...)` for load order.
+- New route module: register through `src/plugins/routes.plugin.ts` using `registerVersionedRoutes`.
+
 ### 1. Create Schema File
 
 ```typescript
@@ -315,12 +320,13 @@ export * from "./example.handler.js";
 ### 5. Register in App
 
 ```typescript
-// src/app.ts
-import { exampleRoutes } from "./modules/example/index.js";
+// src/plugins/routes.plugin.ts
+import { exampleRoutes } from "../modules/example/index.js";
 
 await fastify.register(registerVersionedRoutes, {
   basePath: "/example",
   routePlugin: exampleRoutes,
+  minVersion: "0.2.0", // optional
 });
 ```
 

@@ -11,7 +11,7 @@
 
 ### Schema Location
 
-- **Source**: [`src/db.ts`](file:///Users/juan/work/symb0l/src/db.ts) - Schema definition using `CREATE TABLE IF NOT EXISTS`
+- **Source**: [`../src/db.ts`](../src/db.ts) - Schema definition using `CREATE TABLE IF NOT EXISTS`
 - **Database File**: `symb0l.db` - SQLite database (gitignored)
 
 ### Tables
@@ -193,6 +193,12 @@ pnpm db:reset
 # 3. Run seeds (loads master data)
 ```
 
+Schema change checklist:
+
+1. Update the matching PlantUML source in `doc/diagrams/`.
+2. Recompile diagrams: `pnpm --filter @symb0l/core compile-diagrams`.
+3. Verify generated SVGs in `doc/images/` are current and rendered in docs.
+
 ### Data Updates
 
 When you only need to update seed data:
@@ -227,8 +233,9 @@ pnpm dev:fresh
 
 ### Seed Files
 
-- **Data**: [`src/seeds/countries.ts`](file:///Users/juan/work/symb0l/src/seeds/countries.ts), [`src/seeds/currencies.ts`](file:///Users/juan/work/symb0l/src/seeds/currencies.ts), [`src/seeds/instruments.ts`](file:///Users/juan/work/symb0l/src/seeds/instruments.ts), [`src/seeds/listings.ts`](file:///Users/juan/work/symb0l/src/seeds/listings.ts), [`src/seeds/listing_provider_symbols.ts`](file:///Users/juan/work/symb0l/src/seeds/listing_provider_symbols.ts)
-- **Orchestrator**: [`src/seeds/index.ts`](file:///Users/juan/work/symb0l/src/seeds/index.ts)
+- **Data**: `src/seeds/*.ts`
+- **Orchestrator**: [`../src/seeds/index.ts`](../src/seeds/index.ts)
+- **Builder**: [`../src/seeds/lib/SeederBuilder.ts`](../src/seeds/lib/SeederBuilder.ts)
 
 ### Idempotency
 
@@ -244,6 +251,21 @@ All seeds use `INSERT OR REPLACE` to ensure:
 2. Add seed logic to `src/seeds/index.ts`
 3. Create integration test in `src/seeds/[name].integration.test.ts`
 4. Run `pnpm db:reset` to test
+
+Recommended implementation pattern (`SeederBuilder`):
+
+```typescript
+import { SeederBuilder } from "./lib/SeederBuilder.js";
+
+new SeederBuilder<(typeof data)[number]>(db)
+  .entity("your-entity")
+  .sql("INSERT OR REPLACE INTO your_table (code, name) VALUES (?, ?)")
+  .data(data)
+  .mapToValues((row) => [row.code, row.name])
+  .seed();
+```
+
+For entities with foreign keys, chain `.resolveForeignKey(...)` before `.mapToValues(...)`.
 
 ## Testing
 
@@ -261,7 +283,7 @@ pnpm test:all
 
 Tests use temporary databases (`test-*.db`) that are automatically cleaned up.
 
-See [`doc/TESTING.md`](file:///Users/juan/work/symb0l/doc/TESTING.md) for more details.
+See [`TESTING.md`](TESTING.md) for more details.
 
 ## Production Deployment
 

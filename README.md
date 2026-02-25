@@ -12,6 +12,7 @@ This repository is a monorepo containing the `Symb0l` financial instrument datab
 ## Documentation
 
 - **[Contribution Guidelines](AGENTS.md)**: Context and operating rules for human and AI contributors.
+- **[Contributing Guide](CONTRIBUTING.md)**: Branch/worktree workflow and contributor checklist.
 
 ## Development
 
@@ -31,6 +32,17 @@ pnpm install
 ```
 
 If not using `mise`, ensure you have Node.js and pnpm installed manually.
+
+### Worktree Workflow
+
+Use git worktrees for feature work (recommended):
+
+```bash
+git worktree add -b feature/<name> .worktrees/feature-<name> main
+cd .worktrees/feature-<name>
+```
+
+For required bootstrap steps and branch conventions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Getting Started
 
@@ -83,8 +95,12 @@ Hooks are automatically installed when you run `pnpm install` (via the `prepare`
 
 Before each commit, the following checks run in parallel:
 
+- **Diagram compilation:** `pnpm --filter @symb0l/core compile-diagrams` - Keeps generated SVG docs in sync
 - **Type checking:** `tsc --noEmit` - Catches TypeScript errors
-- **Tests:** `pnpm test` - Ensures all tests pass
+- **Workspace build:** `pnpm -r build` - Detects TS/package build regressions
+
+Integration tests run on pre-push:
+- **Integration tests:** `pnpm test:integration`
 
 ### Local Overrides
 
