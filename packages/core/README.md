@@ -21,6 +21,7 @@
 
 - [Database Management](doc/DATABASE.md) - Schema, seeds, and development workflow
 - [Testing Guide](doc/TESTING.md) - Unit and integration testing
+- [Diagram Workflow](doc/DIAGRAMS.md) - PlantUML setup, generation, and update rules
 
 ## Project Structure
 

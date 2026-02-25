@@ -1,358 +1,127 @@
 # AGENTS.md
 
-This file provides context and operating rules for **both human and AI agents** working on this codebase. Clarity and explicitness are intentional to verify correct understanding and execution.
+Compact operating spec for any AI/human agent in this repository.
 
----
+## 1) Scope and Priority
+- Scope: whole repo unless a deeper `AGENTS.md` exists in a subdirectory.
+- Priority order:
+  1. Direct user request.
+  2. This file.
+  3. Local conventions/tooling.
+- Keep responses and edits minimal, explicit, and verifiable.
 
-## 🏗️ Project Context (Quick Overview)
+## 1.1) Linked Normative Docs (Must Follow)
+- `CONTRIBUTING.md` is normative for contributor workflow (branches, worktrees, bootstrap, PR checks) for both humans and AI agents.
+- For API work in `apps/api`, follow `apps/api/ARCHITECTURE.md`.
+- For core DB work in `packages/core`, follow `packages/core/doc/DATABASE.md` and `packages/core/doc/DIAGRAMS.md`.
 
-- **Project**: `Symb0l` - Financial instrument and symbol database management.
-- **Runtime**: Node.js (via `mise`).
-- **Database**: SQLite (`node:sqlite`).
-- **Language**: TypeScript.
-- **Dependency Manager**: `pnpm` (installed and managed via `mise`).
-- **Source Layout**:
-  - `packages/core/src/` → Source code (TS).
-  - `packages/core/src/db.ts` → Database schema and connection.
-  - `packages/core/doc/diagrams/` → PlantUML source files (`.puml`).
-  - `packages/core/doc/images/` → Generated diagrams (`.svg`).
-  - `apps/api/` → API service ([Architecture Guide](apps/api/ARCHITECTURE.md)).
+## 2) Project Snapshot
+- Project: `Symb0l` (financial instruments/symbols DB).
+- Stack: TypeScript + Node.js (`mise`) + SQLite (`node:sqlite`) + `pnpm`.
+- Main areas:
+  - `packages/core/src/` core logic
+  - `packages/core/src/db.ts` schema/DB connection
+  - `packages/core/doc/diagrams/` PlantUML `.puml`
+  - `packages/core/doc/images/` generated `.svg`
+  - `apps/api/` Fastify API (see `apps/api/ARCHITECTURE.md`)
 
----
+## 3) Mandatory Style Rules
+- Use `const` by default; `let` only if reassignment is required.
+- Use `===` and `!==`.
+- Use double quotes.
+- End statements with semicolons.
+- Prefer `node:test` for tests.
 
-## 🚀 Quick Start (Read This First)
-
-1. Install dependencies:
-   ```bash
-   mise install
-   pnpm install
-   ```
-2. Run tests to verify environment:
-   ```bash
-   pnpm test
-   ```
-
----
-
-## 🎨 Code Style & Standards
-
-### Hard Rules (MUST)
-
-- ✅ Use `const` by default; `let` only when reassignment is required.
-- ✅ Always use strict equality (`===`).
-- ✅ Double quotes (`"`) only.
-- ✅ Semicolons are mandatory.
-- ✅ Prefer `node:test` for testing.
-
----
-
-## 📊 Diagram Compilation
-
-We use **PlantUML** for documenting the database schema and architecture.
-
-### Setup
-
-1. **Environment Variables**:
-   Create a `.env` file in the project root with the following variables:
-
-   ```bash
-   JAVA_BIN=/path/to/java
-   PLANTUML_HOME=/path/to/plantuml.jar
-   ```
-
-   _Note: Ensure `plantuml.jar` exists at the specified path._
-
-2. **Source Files**:
-   - Place `.puml` files in `packages/core/doc/diagrams/`.
-   - Naming convention: `snake_case.puml`.
-
-3. **Compilation**:
-   - Run `pnpm run compile-diagrams`.
-   - The script `packages/core/src/tools/compile-diagrams.ts` will compile modified `.puml` files to `.svg` in `packages/core/doc/images/`.
-
-### Automation
-
-- **Pre-commit Hook**:
-  - `lefthook` is configured to run `pnpm run compile-diagrams` automatically before every commit.
-  - This ensures documentation (SVGs) remains in sync with the source (`.puml`).
-
-### Working with Diagrams
-
-When modifying the database schema (`packages/core/src/db.ts`), you **MUST**:
-
-1. Update the corresponding `.puml` file in `packages/core/doc/diagrams/` (e.g., `data_model.puml`).
-2. Run `pnpm run compile-diagrams` to generate the updated SVG.
-3. Verify the SVG is correctly embedded in `README.md` or other documentation.
-
----
-
-## 🌱 Database Seeding System
-
-We use a **generic seeder pattern** to populate master data tables. This approach ensures consistency, type safety, and maintainability.
-
-### Architecture
-
-The seeding system consists of:
-
-1. **Generic Seeder** (`packages/core/src/seeds/seeder.ts`): Reusable seeding logic
-2. **Seed Data Files** (`packages/core/src/seeds/*.ts`): Master data definitions
-3. **Seed Orchestrator** (`packages/core/src/seeds/index.ts`): Coordinates seeding order
-4. **Integration Tests** (`packages/core/src/seeds/*.integration.test.ts`): Validates seed data
-
-### SeederBuilder Pattern
-
-The seeding system uses the **Builder Pattern** via the `SeederBuilder` class, providing a fluent API for database seeding with automatic foreign key resolution.
-
-**Key Benefits:**
-
-- Single import - no need to import separate `seed` and `resolveForeignKey` functions
-- Fluent, expressive API
-- Clear class-level responsibilities
-- Type-safe with generics
-- Encapsulated foreign key resolution
-
-### Adding a New Seed
-
-Follow these steps to add a new seed entity:
-
-#### 1. Create the Seed Data File
-
-Create `packages/core/src/seeds/[entity].ts` with your master data. See [`packages/core/src/seeds/exchanges.ts`](packages/core/src/seeds/exchanges.ts) or [`packages/core/src/seeds/markets.ts`](packages/core/src/seeds/markets.ts) as templates.
-
-#### 2. Add to Seed Orchestrator
-
-Edit [`packages/core/src/seeds/index.ts`](packages/core/src/seeds/index.ts):
-
-**Simple case (no foreign keys)**:
-
-```typescript
-import { SeederBuilder } from "./lib/SeederBuilder.js";
-
-new SeederBuilder<(typeof exchanges)[number]>(db)
-  .entity("exchanges")
-  .sql("INSERT OR REPLACE INTO exchange (code, name) VALUES (?, ?)")
-  .data(exchanges)
-  .mapToValues((exchange) => [exchange.code, exchange.name])
-  .seed();
-```
-
-**Complex case (with foreign keys)**:
-
-```typescript
-new SeederBuilder<(typeof markets)[number]>(db)
-  .entity("markets")
-  .sql(
-    "INSERT OR REPLACE INTO market (exchange_id, code, name) VALUES (?, ?, ?)",
-  )
-  .data(markets)
-  .resolveForeignKey(
-    "exchange_id",
-    "exchange",
-    "exchange_id",
-    "code",
-    (market) => market.exchange_code,
-  )
-  .mapToValues((market) => [
-    (market as unknown as Record<string, number>).exchange_id,
-    market.code,
-    market.name,
-    market.city,
-    market.country,
-    market.timezone,
-  ])
-  .seed();
-```
-
-**Multiple foreign keys**:
-
-```typescript
-new SeederBuilder<(typeof items)[number]>(db)
-  .entity("items")
-  .sql(
-    "INSERT OR REPLACE INTO item (code, category_id, region_id) VALUES (?, ?, ?)",
-  )
-  .data(items)
-  .resolveForeignKey(
-    "category_id",
-    "category",
-    "id",
-    "code",
-    (item) => item.categoryCode,
-  )
-  .resolveForeignKey(
-    "region_id",
-    "region",
-    "id",
-    "code",
-    (item) => item.regionCode,
-  )
-  .mapToValues((item) => [
-    item.code,
-    (item as unknown as Record<string, number>).category_id,
-    (item as unknown as Record<string, number>).region_id,
-  ])
-  .seed();
-```
-
-#### 3. Create Integration Tests
-
-Create `packages/core/src/seeds/[entity].integration.test.ts`. Use these as templates:
-
-- [`packages/core/src/seeds/exchanges.integration.test.ts`](packages/core/src/seeds/exchanges.integration.test.ts) - Simple entity
-- [`packages/core/src/seeds/markets.integration.test.ts`](packages/core/src/seeds/markets.integration.test.ts) - Entity with foreign keys
-
-#### 4. Verify
-
+## 4) Standard Setup and Validation
 ```bash
-pnpm test:integration  # All tests should pass
-pnpm seed              # Verify seeding works
-```
-
-### Best Practices
-
-1. **Order Matters**: Seed entities in dependency order (parents before children)
-2. **Idempotency**: Use `INSERT OR REPLACE` to make seeds idempotent
-3. **Foreign Keys**: Enable with `PRAGMA foreign_keys = ON;`
-4. **Type Safety**: Always specify the generic type parameter: `SeederBuilder<typeof data[number]>(db)`
-5. **Testing**: Write integration tests for every seed entity
-6. **Documentation**: Add JSDoc comments explaining the entity's purpose
-
-### Reference Implementation
-
-See the complete implementation:
-
-- **SeederBuilder**: [`packages/core/src/seeds/lib/SeederBuilder.ts`](packages/core/src/seeds/lib/SeederBuilder.ts)
-- **Data**: [`packages/core/src/seeds/markets.ts`](packages/core/src/seeds/markets.ts)
-- **Seeding**: [`packages/core/src/seeds/index.ts`](packages/core/src/seeds/index.ts) (markets section)
-- **Tests**: [`packages/core/src/seeds/markets.integration.test.ts`](packages/core/src/seeds/markets.integration.test.ts)
-- **Unit Tests**: [`packages/core/src/seeds/lib/SeederBuilder.test.ts`](packages/core/src/seeds/lib/SeederBuilder.test.ts)
-
----
-
-## 🌿 Branch & Worktree Workflow
-
-To keep the workspace clean and avoid switching branches in the main directory, we use **Git Worktrees** for feature development.
-
-### Branch Naming Convention
-
-- **Features**: `feature/<name>` (e.g., `feature/add-iperionx`)
-- **Fixes**: `fix/<name>`
-- **Chore**: `chore/<name>`
-
-### Workflow
-
-1. **Create a Worktree**:
-   Create a new worktree in the `.worktrees/` directory (which is gitignored).
-
-   ```bash
-   # Syntax: git worktree add -b <branch-name> .worktrees/<folder-name> <base-branch>
-   git worktree add -b feature/add-new-data .worktrees/feature-add-new-data main
-   ```
-
-2. **Switch Context**:
-   Open the worktree in your editor or navigate to it in the terminal.
-
-   ```bash
-   cd .worktrees/feature-add-new-data
-   ```
-
-3. **Develop & Commit**:
-   Make your changes, run tests, and commit as usual within the worktree.
-
-4. **Cleanup**:
-   Once the PR is merged, remove the worktree.
-
-   ```bash
-   git worktree remove .worktrees/feature-add-new-data
-   ```
-
-### Worktree Bootstrap (Required)
-
-After creating a new worktree, you **MUST** initialize environment files and build artifacts before running services/tests.
-
-From the worktree root (example: `.worktrees/feature-add-new-data`):
-
-```bash
-# 1) Install deps in the worktree
+mise install
 pnpm install
+pnpm test
+```
 
-# 2) Copy env files used by core and API (PRIORITY: copy from main local workspace, not from another worktree)
-cp /path/to/main/workspace/packages/core/.env packages/core/.env
-cp /path/to/main/workspace/apps/api/.env apps/api/.env
+## 5) High-Impact Workflows
 
-# Fallback only if main-workspace .env files do not exist:
-cp packages/core/.env.example packages/core/.env
-cp apps/api/.env.example apps/api/.env
+### 5.1 DB Schema or Model Changes
+If `packages/core/src/db.ts` changes:
+1. Update matching PlantUML in `packages/core/doc/diagrams/`.
+2. Run `pnpm run compile-diagrams`.
+3. Confirm generated SVG in `packages/core/doc/images/` is current and referenced docs still render.
 
-# 3) Build workspace packages (required so apps/api uses up-to-date @symb0l/core dist)
-pnpm --filter @symb0l/core build
-pnpm --filter symb0l-api build
+### 5.2 Seed Data Changes
+Seed system:
+- Builder: `packages/core/src/seeds/lib/SeederBuilder.ts`
+- Orchestrator: `packages/core/src/seeds/index.ts`
+- Data: `packages/core/src/seeds/*.ts`
+- Integration tests: `packages/core/src/seeds/*.integration.test.ts`
 
-# 4) Bootstrap the database for the new worktree
+Rules:
+- Seed in dependency order (parent tables before child tables).
+- Use idempotent inserts (`INSERT OR REPLACE`).
+- Keep foreign keys enabled (`PRAGMA foreign_keys = ON;`).
+- Keep types explicit (`SeederBuilder<typeof data[number]>(db)`).
+- Add/adjust integration tests for each seed entity changed.
+
+Validation:
+```bash
+pnpm test:integration
 pnpm seed
 ```
 
-Use `.env` files from the primary local workspace as the source of truth. Use `.env.example` only when no existing `.env` is available there.
+### 5.3 API Changes (Fastify + Autoload)
+- DI instances: `apps/api/src/infrastructure/di/container.ts`
+- Fastify decorations: `apps/api/src/plugins/di.plugin.ts`
+- Fastify type defs: `apps/api/src/types/fastify.d.ts`
+- Route orchestration: `apps/api/src/plugins/routes.plugin.ts`
 
-### Agent & Editor Workflow
+Rules:
+- Do not manually wire everything in `app.ts`.
+- Initialization plugins must declare dependency order via `fp(..., { dependencies: [...] })` when required.
+- New endpoints must be registered through versioned route orchestration.
 
-When using worktrees, treat each worktree as a **separate workspace**.
+## 6) Worktree-First Git Workflow
+Use worktrees for feature work; avoid switching main workspace branch.
 
-- **IDE/Editor**: Open the worktree folder (e.g., `.worktrees/feature-add-new-data`) as a **separate window**.
-  - **Why?**: If you open the main folder, the IDE indexes both the main `node_modules` and the worktree's `node_modules`, causing duplicate symbol errors and slow performance.
-  - **Disk Usage**: `pnpm` uses a global content-addressable store, so the physical `node_modules` files in worktrees share disk space with the main project (hard links), minimizing overhead.
-- **AI Agents & Humans**: Point the agent or your editor to the worktree directory as the **workspace root**. This ensures actions are performed on the correct files and git context.
+Branch naming:
+- `feature/<name>`
+- `fix/<name>`
+- `chore/<name>`
 
----
-
-## 🧩 API Architecture (DI & Autoload)
-
-The `apps/api` service uses a fully decoupled architecture powered by `fastify-plugin` (fp) dependencies and `@fastify/autoload`. There is no manual registration inside `app.ts`.
-
-### 1. Adding a New Service/Plugin (Dependency Injection)
-
-We use a central Dependency Injection container to avoid scatter-instantiation across the initialization phase.
-
-1. **Instantiate** your service in `apps/api/src/infrastructure/di/container.ts`.
-2. **Inject** it into the fastify instance in `apps/api/src/plugins/di.plugin.ts` using `fastify.decorate(name, service)`.
-3. **Declare** its type in `apps/api/src/types/fastify.d.ts` under the `FastifyInstance` interface.
-
-### 2. Creating an Initialization Plugin
-
-If you need to configure a package (e.g., sensible, cors, swagger), create a file in `apps/api/src/plugins/`.
-
-To ensure the execution order is correct (since autoload picks them up asynchronously), use the `dependencies` array in the `fp` wrapper:
-
-```typescript
-export default fp(
-  async (fastify: FastifyInstance) => {
-    // Your initialization logic
-  },
-  {
-    name: "your-plugin-name",
-    fastify: "5.x",
-    dependencies: ["di-plugin", "version-resolver"], // <- Forces these to load FIRST
-  },
-);
+Create:
+```bash
+git worktree add -b feature/<name> .worktrees/feature-<name> main
 ```
 
-### 3. Adding a New Route Endpoint
-
-Because routes are intrinsically versioned, they are **NOT** autoloaded by default. They are centrally orchestrated inside `apps/api/src/plugins/routes.plugin.ts`.
-
-To add a new endpoint:
-
-1. Create your module folder (e.g., `modules/users/`) with its schema, handler, and routes (`users.routes.ts`).
-2. Export a standard fastify plugin function containing your endpoints.
-3. Open `apps/api/src/plugins/routes.plugin.ts`.
-4. Register your module using the Versioned Routes helper:
-
-```typescript
-await fastify.register(registerVersionedRoutes, {
-  basePath: "/users",
-  routePlugin: usersRoutes,
-  minVersion: "0.2.0", // Optional: The version where this endpoint was introduced
-});
+Bootstrap in new worktree:
+```bash
+pnpm install
+cp /path/to/main/workspace/packages/core/.env packages/core/.env
+cp /path/to/main/workspace/apps/api/.env apps/api/.env
+# fallback only if missing:
+cp packages/core/.env.example packages/core/.env
+cp apps/api/.env.example apps/api/.env
+pnpm --filter @symb0l/core build
+pnpm --filter symb0l-api build
+pnpm seed
 ```
 
-This guarantees your endpoint is correctly mapped, version prefixes are handled automatically (`/v0.2.0/users`), and legacy aliases are applied.
+Operational rule:
+- Open each worktree as a separate editor window/workspace root.
+
+## 7) Diagram Tooling Requirements
+For PlantUML compilation, ensure root `.env` defines:
+```bash
+JAVA_BIN=/path/to/java
+PLANTUML_HOME=/path/to/plantuml.jar
+```
+
+## 8) Done Criteria (Before Hand-off)
+- Relevant tests pass for changed area.
+- Generated artifacts updated when required (e.g., diagrams).
+- No unrelated file changes introduced.
+- Short change summary + explicit verification commands run.
+
+## 9) Token-Minimization Rules for Agents
+- Prefer file references over long inline examples.
+- Do not restate architecture already documented in code/docs.
+- Ask only blocking questions; otherwise make reasonable assumptions and proceed.
+- Return concise outputs: findings, edits, verification, next step.
