@@ -13,7 +13,9 @@
     "format": "pnpm -r format",
     "db:reset": "pnpm --filter @symb0l/core db:reset",
     "db:seed": "pnpm --filter @symb0l/core db:seed",
-    "fix:all": "pnpm -r run fix:all"
+    "fix:all": "pnpm -r run fix:all",
+    "tui:build": "cargo build --release --manifest-path apps/tui/Cargo.toml",
+    "tui:install": "cargo install --path apps/tui"
   },
   "devDependencies": {
     "lefthook": "^1.6.10"

@@ -42,3 +42,6 @@ src/tools/generate_static_seeds.ts
 
 # Worktrees
 .worktrees
+
+# Rust build artifacts
+apps/tui/target
