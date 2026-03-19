@@ -1,0 +1,7 @@
+[tools]
+node = "24"
+rust = "stable"
+just = "latest"
+
+[settings]
+experimental = false

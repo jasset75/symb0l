@@ -28,4 +28,4 @@ pre-commit:
 pre-push:
   commands:
     integration-tests:
-      run: pnpm test:integration
+      run: just test-integration
