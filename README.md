@@ -18,20 +18,46 @@ This repository is a monorepo containing the `Symb0l` financial instrument datab
 
 ### Prerequisites
 
-- Node.js (managed via mise)
-- pnpm (managed via mise)
-- [mise](https://mise.jdx.dev/) (optional, for environment management)
+- [mise](https://mise.jdx.dev/) — manages all tool versions (Node, Rust, just)
+- [just](https://just.systems) — task runner (installed automatically via `mise install`)
+- [pnpm](https://pnpm.io) — Node package manager
 
 ### Installation
 
-Using `mise` to install the correct Node.js and pnpm versions:
+Install all tools and Node dependencies in one step:
 
 ```bash
-mise install
-pnpm install
+mise install   # installs Node, Rust, just
+just install   # runs pnpm install
 ```
 
-If not using `mise`, ensure you have Node.js and pnpm installed manually.
+Or bootstrap everything at once:
+
+```bash
+just bootstrap
+```
+
+### Task Runner
+
+All common actions are available via `just`. Run `just` (no arguments) to list them:
+
+| Recipe | Description |
+|--------|-------------|
+| `just bootstrap` | Install tools (mise) + Node deps (pnpm) |
+| `just dev` | Start API in background + TUI in foreground |
+| `just api` | Start API in dev/watch mode only |
+| `just build-all` | Build all artefacts (Node packages + TUI binary) |
+| `just build` | Build Node packages only |
+| `just tui-build` | Build TUI release binary |
+| `just tui-install` | Install TUI binary to `~/.cargo/bin/symb0l-tui` |
+| `just test` | Unit tests (Node + Rust) |
+| `just test-all` | Unit + integration (Node) + Rust tests |
+| `just test-integration` | Node integration tests only |
+| `just db-reset` | Reset the database |
+| `just db-seed` | Seed the database |
+| `just lint` | Lint all packages |
+| `just format` | Format all packages |
+| `just diagrams` | Compile PlantUML diagrams to SVG |
 
 ### Worktree Workflow
 
@@ -44,43 +70,20 @@ cd .worktrees/feature-<name>
 
 For required bootstrap steps and branch conventions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-### Getting Started
-
-To start the application in development mode:
-
-```bash
-pnpm dev
-```
-
-To build and start the application:
-
-```bash
-pnpm build
-pnpm start
-```
-
 ### Testing
 
-This project uses Node.js 24's native test runner (`node:test`) for zero-dependency testing.
+This project uses Node.js 24's native test runner (`node:test`) for zero-dependency testing, and Rust's built-in `cargo test` for the TUI.
 
-#### Run all tests
+#### Run all unit tests
 
 ```bash
-mise exec -- pnpm test
+just test
 ```
 
-#### Run tests in watch mode
-
-Automatically re-run tests when files change:
+#### Run all tests (unit + integration)
 
 ```bash
-mise exec -- pnpm test:watch
-```
-
-#### Generate test coverage
-
-```bash
-mise exec -- pnpm test:coverage
+just test-all
 ```
 
 ## Pre-commit Hooks
@@ -95,12 +98,12 @@ Hooks are automatically installed when you run `pnpm install` (via the `prepare`
 
 Before each commit, the following checks run in parallel:
 
-- **Diagram compilation:** `pnpm --filter @symb0l/core compile-diagrams` - Keeps generated SVG docs in sync
-- **Type checking:** `tsc --noEmit` - Catches TypeScript errors
-- **Workspace build:** `pnpm -r build` - Detects TS/package build regressions
+- **Diagram compilation:** keeps generated SVG docs in sync
+- **Type checking:** catches TypeScript errors
+- **Workspace build:** detects TS/package build regressions
 
 Integration tests run on pre-push:
-- **Integration tests:** `pnpm test:integration`
+- **Integration tests:** `just test-integration`
 
 ### Local Overrides
 

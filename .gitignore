@@ -27,7 +27,6 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # Tooling
-.mise.toml
 lefthook-local.yml
 *.sqbpro
 
