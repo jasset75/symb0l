@@ -2,18 +2,7 @@
   "name": "symb0l-monorepo",
   "private": true,
   "scripts": {
-    "prepare": "lefthook install",
-    "list": "pnpm -r list --depth -1",
-    "core:dev": "pnpm --filter @symb0l/core dev",
-    "api:dev": "pnpm --filter symb0l-api dev",
-    "test": "pnpm -r test",
-    "test:integration": "pnpm -r test:integration",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "format": "pnpm -r format",
-    "db:reset": "pnpm --filter @symb0l/core db:reset",
-    "db:seed": "pnpm --filter @symb0l/core db:seed",
-    "fix:all": "pnpm -r run fix:all"
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "lefthook": "^1.6.10"
