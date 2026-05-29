@@ -17,7 +17,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use crate::{
     api::ApiClient,
     app::App,
-    event::{AppEvent, EventHandler, is_quit},
+    event::{is_quit, AppEvent, EventHandler},
 };
 
 // ---------------------------------------------------------------------------
@@ -105,8 +105,18 @@ async fn main() -> Result<()> {
                     use crossterm::event::KeyCode;
                     match key.code {
                         KeyCode::Esc => app.cancel_filter(),
-                        KeyCode::Enter => app.apply_filter().await,
-                        KeyCode::Tab => app.filter.next_field(),
+                        KeyCode::Enter => {
+                            if !app.filter.apply_suggestion() {
+                                app.apply_filter().await;
+                            }
+                        }
+                        KeyCode::Tab => {
+                            if !app.filter.apply_suggestion() {
+                                app.filter.next_field();
+                            }
+                        }
+                        KeyCode::Up => app.filter.suggestion_up(),
+                        KeyCode::Down => app.filter.suggestion_down(),
                         KeyCode::BackTab => app.filter.prev_field(),
                         KeyCode::Backspace => {
                             app.filter.active_value_mut().pop();

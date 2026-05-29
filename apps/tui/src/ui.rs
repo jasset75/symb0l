@@ -74,7 +74,10 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
     };
 
     let loading_span = if app.loading {
-        Span::styled(" loading… ", Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC))
+        Span::styled(
+            " loading… ",
+            Style::default().fg(C_DIM).add_modifier(Modifier::ITALIC),
+        )
     } else {
         let secs = app.last_refresh.elapsed().as_secs();
         let refresh_text = if secs < 5 {
@@ -125,44 +128,40 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
     let constraints = if show_quotes {
         vec![
             Constraint::Percentage(8),  // Ticker
-            Constraint::Percentage(28), // Name
-            Constraint::Percentage(20), // Sector
-            Constraint::Percentage(17), // Profile
-            Constraint::Percentage(17), // Price
+            Constraint::Percentage(26), // Name
+            Constraint::Percentage(10), // Market
+            Constraint::Percentage(5),  // Ccy
+            Constraint::Percentage(16), // Sector
+            Constraint::Percentage(12), // Profile
+            Constraint::Percentage(13), // Price
             Constraint::Percentage(10), // Chg%
         ]
     } else {
         vec![
             Constraint::Percentage(10), // Ticker
-            Constraint::Percentage(33), // Name
-            Constraint::Percentage(22), // Sector
-            Constraint::Percentage(20), // Profile
-            Constraint::Percentage(15), // Type
+            Constraint::Percentage(28), // Name
+            Constraint::Percentage(12), // Market
+            Constraint::Percentage(6),  // Ccy
+            Constraint::Percentage(18), // Sector
+            Constraint::Percentage(14), // Profile
+            Constraint::Percentage(12), // Type
         ]
     };
 
     let header_cells: Vec<Cell> = if show_quotes {
-        ["Ticker", "Name", "Sector", "Profile", "Price", "Chg%"]
-            .iter()
-            .map(|h| {
-                Cell::from(*h).style(
-                    Style::default()
-                        .fg(C_HEADER)
-                        .add_modifier(Modifier::BOLD),
-                )
-            })
-            .collect()
+        [
+            "Ticker", "Name", "Market", "Ccy", "Sector", "Profile", "Price", "Chg%",
+        ]
+        .iter()
+        .map(|h| Cell::from(*h).style(Style::default().fg(C_HEADER).add_modifier(Modifier::BOLD)))
+        .collect()
     } else {
-        ["Ticker", "Name", "Sector", "Profile", "Type"]
-            .iter()
-            .map(|h| {
-                Cell::from(*h).style(
-                    Style::default()
-                        .fg(C_HEADER)
-                        .add_modifier(Modifier::BOLD),
-                )
-            })
-            .collect()
+        [
+            "Ticker", "Name", "Market", "Ccy", "Sector", "Profile", "Type",
+        ]
+        .iter()
+        .map(|h| Cell::from(*h).style(Style::default().fg(C_HEADER).add_modifier(Modifier::BOLD)))
+        .collect()
     };
 
     let header = Row::new(header_cells).height(1).bottom_margin(1);
@@ -182,11 +181,7 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
     let table = Table::new(rows, constraints)
         .header(header)
         .block(block)
-        .row_highlight_style(
-            Style::default()
-                .bg(C_SELECTED)
-                .add_modifier(Modifier::BOLD),
-        )
+        .row_highlight_style(Style::default().bg(C_SELECTED).add_modifier(Modifier::BOLD))
         .highlight_symbol("▶ ");
 
     frame.render_stateful_widget(table, area, &mut app.table_state);
@@ -194,15 +189,19 @@ fn render_table(frame: &mut Frame, app: &mut App, area: Rect) {
 
 fn listing_to_row(l: &Listing, show_quotes: bool) -> Row<'static> {
     let symbol = l.symbol_code.clone();
-    let name = truncate(&l.instrument_name, 28);
+    let name = truncate(&l.instrument_name, 26);
+    let market = truncate(&l.market_name, 12);
+    let ccy = truncate(&l.currency_code, 4);
     let sector = truncate(&l.sector, 14);
-    let profile = truncate(&l.profile, 11);
+    let profile = truncate(&l.profile, 10);
 
     if show_quotes {
         let (price_str, chg_str, chg_style) = quote_cells(l);
         Row::new(vec![
             Cell::from(symbol).style(Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
             Cell::from(name),
+            Cell::from(market).style(Style::default().fg(C_DIM)),
+            Cell::from(ccy).style(Style::default().fg(C_DIM)),
             Cell::from(sector).style(Style::default().fg(C_DIM)),
             Cell::from(profile),
             Cell::from(price_str),
@@ -213,6 +212,8 @@ fn listing_to_row(l: &Listing, show_quotes: bool) -> Row<'static> {
         Row::new(vec![
             Cell::from(symbol).style(Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD)),
             Cell::from(name),
+            Cell::from(market).style(Style::default().fg(C_DIM)),
+            Cell::from(ccy).style(Style::default().fg(C_DIM)),
             Cell::from(sector).style(Style::default().fg(C_DIM)),
             Cell::from(profile),
             Cell::from(typ).style(Style::default().fg(C_DIM)),
@@ -246,11 +247,9 @@ fn quote_cells(l: &Listing) -> (String, String, Style) {
             format!("err:{}", e.code),
             Style::default().fg(C_ERROR),
         ),
-        Some(QuoteResult::NotFound) | None => (
-            "-".to_string(),
-            "-".to_string(),
-            Style::default().fg(C_DIM),
-        ),
+        Some(QuoteResult::NotFound) | None => {
+            ("-".to_string(), "-".to_string(), Style::default().fg(C_DIM))
+        }
     }
 }
 
@@ -261,22 +260,34 @@ fn quote_cells(l: &Listing) -> (String, String, Style) {
 fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
     let hints: Vec<Span> = match (app.editing, app.mode) {
         (true, _) => vec![
-            key("[Tab]"), txt(" next field  "),
-            key("[Enter]"), txt(" search  "),
-            key("[Esc]"), txt(" cancel"),
+            key("[Tab]"),
+            txt(" next field  "),
+            key("[Enter]"),
+            txt(" search  "),
+            key("[Esc]"),
+            txt(" cancel"),
         ],
         (false, Mode::Browse) => vec![
-            key("[f]"), txt(" filter  "),
-            key("[Space]"), txt(" load quotes  "),
-            key("[↑↓]"), txt(" navigate  "),
-            key("[q]"), txt(" quit"),
+            key("[f]"),
+            txt(" filter  "),
+            key("[Space]"),
+            txt(" load quotes  "),
+            key("[↑↓]"),
+            txt(" navigate  "),
+            key("[q]"),
+            txt(" quit"),
         ],
         (false, Mode::Quotes) => vec![
-            key("[f]"), txt(" filter  "),
-            key("[Space]"), txt(" stop quotes  "),
-            key("[r]"), txt(" refresh  "),
-            key("[↑↓]"), txt(" navigate  "),
-            key("[q]"), txt(" quit"),
+            key("[f]"),
+            txt(" filter  "),
+            key("[Space]"),
+            txt(" stop quotes  "),
+            key("[r]"),
+            txt(" refresh  "),
+            key("[↑↓]"),
+            txt(" navigate  "),
+            key("[q]"),
+            txt(" quit"),
         ],
     };
 
@@ -294,9 +305,7 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
 fn key(s: &str) -> Span<'static> {
     Span::styled(
         s.to_owned(),
-        Style::default()
-            .fg(C_ACCENT)
-            .add_modifier(Modifier::BOLD),
+        Style::default().fg(C_ACCENT).add_modifier(Modifier::BOLD),
     )
 }
 fn txt(s: &str) -> Span<'static> {
@@ -308,12 +317,20 @@ fn txt(s: &str) -> Span<'static> {
 // ---------------------------------------------------------------------------
 
 fn render_filter_panel(frame: &mut Frame, app: &App, area: Rect) {
+    let suggestions = app.filter.get_suggestions();
+    let show_suggestions = !suggestions.is_empty();
+
     // Centre a fixed-size box over the terminal.
     let popup_width = 58u16;
-    let popup_height = 10u16;
+    let popup_height = if show_suggestions { 16u16 } else { 10u16 };
     let x = area.x + area.width.saturating_sub(popup_width) / 2;
     let y = area.y + area.height.saturating_sub(popup_height) / 2;
-    let popup_area = Rect::new(x, y, popup_width.min(area.width), popup_height.min(area.height));
+    let popup_area = Rect::new(
+        x,
+        y,
+        popup_width.min(area.width),
+        popup_height.min(area.height),
+    );
 
     // Clear the background cell by cell so the modal stands out.
     frame.render_widget(Clear, popup_area);
@@ -334,9 +351,15 @@ fn render_filter_panel(frame: &mut Frame, app: &App, area: Rect) {
         vertical: 1,
     });
 
-    let field_rows = Layout::default()
+    let mut constraints = vec![Constraint::Length(1); FilterField::ALL.len()];
+    if show_suggestions {
+        constraints.push(Constraint::Min(5)); // Suggestions area
+    }
+    constraints.push(Constraint::Length(1)); // Hint row
+
+    let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(vec![Constraint::Length(1); FilterField::ALL.len() + 1])
+        .constraints(constraints)
         .split(inner);
 
     for (i, &field) in FilterField::ALL.iter().enumerate() {
@@ -363,18 +386,50 @@ fn render_filter_panel(frame: &mut Frame, app: &App, area: Rect) {
             ),
         ]);
 
-        if i < field_rows.len() {
-            frame.render_widget(Paragraph::new(line), field_rows[i]);
+        if i < rows.len() {
+            frame.render_widget(Paragraph::new(line), rows[i]);
         }
     }
 
+    // Suggestions area
+    if show_suggestions {
+        let sug_rect = rows[FilterField::ALL.len()];
+        let mut lines = vec![Line::from(vec![Span::styled(
+            "   ▾ Autocompletar:",
+            Style::default().fg(C_ACCENT).add_modifier(Modifier::DIM),
+        )])];
+        for (i, &sug) in suggestions.iter().enumerate().take(4) {
+            let prefix = if Some(i) == app.filter.suggestion_idx {
+                "   ▶ "
+            } else {
+                "     "
+            };
+            let style = if Some(i) == app.filter.suggestion_idx {
+                Style::default()
+                    .fg(C_ACCENT)
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::REVERSED)
+            } else {
+                Style::default().fg(C_DIM)
+            };
+            lines.push(Line::from(Span::styled(format!("{prefix}{sug} "), style)));
+        }
+        if suggestions.len() > 4 {
+            lines.push(Line::from(Span::styled(
+                "     ... (sigue escribiendo)",
+                Style::default().fg(C_DIM),
+            )));
+        }
+        frame.render_widget(Paragraph::new(lines), sug_rect);
+    }
+
     // Hint row
-    if let Some(hint_area) = field_rows.last() {
+    if let Some(hint_area) = rows.last() {
         let hint = Line::from(vec![
             key("[Enter]"),
             txt(" Buscar  "),
             key("[Tab]"),
-            txt(" Sig. campo  "),
+            txt(" Seleccionar  "),
             key("[Esc]"),
             txt(" Cancelar"),
         ]);

@@ -74,8 +74,40 @@ impl App {
         self.loading = true;
         self.error = None;
         let params = self.filter.to_query_params();
+        let is_initial_load = self.filter.is_empty() && self.filter.known_sectors.is_empty();
+
         match self.client.get_listings(params, include_quote).await {
             Ok(listings) => {
+                if is_initial_load {
+                    let mut sectors: Vec<String> = listings
+                        .iter()
+                        .filter_map(|l| {
+                            if l.sector.is_empty() {
+                                None
+                            } else {
+                                Some(l.sector.clone())
+                            }
+                        })
+                        .collect();
+                    sectors.sort();
+                    sectors.dedup();
+                    self.filter.known_sectors = sectors;
+
+                    let mut profiles: Vec<String> = listings
+                        .iter()
+                        .filter_map(|l| {
+                            if l.profile.is_empty() {
+                                None
+                            } else {
+                                Some(l.profile.clone())
+                            }
+                        })
+                        .collect();
+                    profiles.sort();
+                    profiles.dedup();
+                    self.filter.known_profiles = profiles;
+                }
+
                 self.listings = listings;
                 self.last_refresh = Instant::now();
                 // Clamp table selection to valid range.
