@@ -1300,4 +1300,17 @@ export const instruments: InstrumentData[] = [
     sub_industry_name: "Silver ETC",
     country_exposure_name: "Global",
   },
+  {
+    instrument_id: 100,
+    isin: "US8740541094",
+    name: "TAKE-TWO INTERACTIVE SOFTWARE INC",
+    instrument_type: "Common Stock",
+    profile_name: "Growth",
+    risk_level_name: "Moderate",
+    asset_class_level_name: "Mature",
+    market_cap_name: "Large Cap",
+    sector_name: "Communication Services",
+    sub_industry_name: "Interactive Home Entertainment",
+    country_exposure_name: "US",
+  },
 ];

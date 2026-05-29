@@ -285,6 +285,34 @@ describe("Metadata Seeds Integration Tests", () => {
     assert.strictEqual(result.country_exposure, "Global");
   });
 
+  it("should classify Take-Two as Interactive Home Entertainment", () => {
+    seedAllMetadata();
+
+    const result = testDb
+      .prepare(
+        `
+        SELECT
+            i.name,
+            s.name as sector,
+            si.name as sub_industry
+        FROM instrument i
+        LEFT JOIN sector s ON i.sector_id = s.sector_id
+        LEFT JOIN sub_industry si ON i.sub_industry_id = si.sub_industry_id
+        WHERE i.isin = 'US8740541094'
+    `
+      )
+      .get() as {
+      name: string;
+      sector: string;
+      sub_industry: string;
+    };
+
+    assert.ok(result, "Take-Two should exist");
+    assert.strictEqual(result.name, "TAKE-TWO INTERACTIVE SOFTWARE INC");
+    assert.strictEqual(result.sector, "Communication Services");
+    assert.strictEqual(result.sub_industry, "Interactive Home Entertainment");
+  });
+
   it("should seed all master tables", () => {
     seedAllMetadata();
 

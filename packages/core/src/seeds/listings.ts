@@ -584,4 +584,10 @@ export const listings: ListingData[] = [
     isin: "IE00B7XD2195",
     currency_code: "EUR",
   },
+  {
+    market_prefix: "NASDAQ",
+    symbol_code: "TTWO",
+    isin: "US8740541094",
+    currency_code: "USD",
+  },
 ];

@@ -257,4 +257,10 @@ export const subIndustries = [
     description:
       "Companies engaged in the exploration and mining of diversified metals and minerals",
   },
+  {
+    sub_industry_id: 48,
+    name: "Interactive Home Entertainment",
+    description:
+      "Companies that produce interactive gaming products, including video game publishers and developers",
+  },
 ];
