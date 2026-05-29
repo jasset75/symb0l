@@ -1,7 +1,8 @@
 /// Names of the editable filter fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterField {
-    Sector,
+    Industry,
+    SubIndustry,
     Profile,
     /// Partial name match → `instrument_name` API param.
     InstrumentName,
@@ -11,7 +12,8 @@ pub enum FilterField {
 
 impl FilterField {
     pub const ALL: &'static [FilterField] = &[
-        FilterField::Sector,
+        FilterField::Industry,
+        FilterField::SubIndustry,
         FilterField::Profile,
         FilterField::InstrumentName,
         FilterField::SymbolCode,
@@ -19,7 +21,8 @@ impl FilterField {
 
     pub fn label(self) -> &'static str {
         match self {
-            FilterField::Sector => "Sector",
+            FilterField::Industry => "Industry",
+            FilterField::SubIndustry => "Sub-industry",
             FilterField::Profile => "Profile",
             FilterField::InstrumentName => "Name",
             FilterField::SymbolCode => "Ticker",
@@ -30,7 +33,8 @@ impl FilterField {
 /// Holds the current filter values and which field the user is editing.
 #[derive(Debug, Clone, Default)]
 pub struct FilterState {
-    pub sector: String,
+    pub industry: String,
+    pub sub_industry: String,
     pub profile: String,
     pub instrument_name: String,
     pub symbol_code: String,
@@ -41,8 +45,10 @@ pub struct FilterState {
     /// Selected index in the autocomplete dropdown (if any).
     pub suggestion_idx: Option<usize>,
 
-    /// Dynamically discovered sectors from API
-    pub known_sectors: Vec<String>,
+    /// Dynamically discovered industries from API `sector` values.
+    pub known_industries: Vec<String>,
+    /// Dynamically discovered sub-industries from API.
+    pub known_sub_industries: Vec<String>,
     /// Dynamically discovered profiles from API
     pub known_profiles: Vec<String>,
 }
@@ -57,8 +63,11 @@ impl FilterState {
         if !self.instrument_name.is_empty() {
             params.push(("instrument_name".to_string(), self.instrument_name.clone()));
         }
-        if !self.sector.is_empty() {
-            params.push(("sector".to_string(), self.sector.clone()));
+        if !self.industry.is_empty() {
+            params.push(("sector".to_string(), self.industry.clone()));
+        }
+        if !self.sub_industry.is_empty() {
+            params.push(("sub_industry".to_string(), self.sub_industry.clone()));
         }
         if !self.profile.is_empty() {
             params.push(("profile".to_string(), self.profile.clone()));
@@ -71,7 +80,8 @@ impl FilterState {
         // Reset suggestion index when the content changes
         self.suggestion_idx = None;
         match FilterField::ALL[self.active] {
-            FilterField::Sector => &mut self.sector,
+            FilterField::Industry => &mut self.industry,
+            FilterField::SubIndustry => &mut self.sub_industry,
             FilterField::Profile => &mut self.profile,
             FilterField::InstrumentName => &mut self.instrument_name,
             FilterField::SymbolCode => &mut self.symbol_code,
@@ -82,7 +92,8 @@ impl FilterState {
     #[allow(dead_code)]
     pub fn active_value(&self) -> &str {
         match FilterField::ALL[self.active] {
-            FilterField::Sector => &self.sector,
+            FilterField::Industry => &self.industry,
+            FilterField::SubIndustry => &self.sub_industry,
             FilterField::Profile => &self.profile,
             FilterField::InstrumentName => &self.instrument_name,
             FilterField::SymbolCode => &self.symbol_code,
@@ -97,8 +108,14 @@ impl FilterState {
         }
 
         match FilterField::ALL[self.active] {
-            FilterField::Sector => self
-                .known_sectors
+            FilterField::Industry => self
+                .known_industries
+                .iter()
+                .filter(|s| s.to_lowercase().contains(&input))
+                .map(|s| s.as_str())
+                .collect(),
+            FilterField::SubIndustry => self
+                .known_sub_industries
                 .iter()
                 .filter(|s| s.to_lowercase().contains(&input))
                 .map(|s| s.as_str())
@@ -118,7 +135,8 @@ impl FilterState {
     pub fn is_empty(&self) -> bool {
         self.symbol_code.is_empty()
             && self.instrument_name.is_empty()
-            && self.sector.is_empty()
+            && self.industry.is_empty()
+            && self.sub_industry.is_empty()
             && self.profile.is_empty()
     }
 
@@ -168,7 +186,8 @@ impl FilterState {
                 let text = suggestions[idx].to_string();
                 // Assign text without triggering active_value_mut to keep suggestion_idx (handled manually here)
                 match FilterField::ALL[self.active] {
-                    FilterField::Sector => self.sector = text,
+                    FilterField::Industry => self.industry = text,
+                    FilterField::SubIndustry => self.sub_industry = text,
                     FilterField::Profile => self.profile = text,
                     _ => {}
                 }
@@ -186,10 +205,15 @@ mod tests {
 
     fn state_with_suggestions() -> FilterState {
         FilterState {
-            known_sectors: vec![
+            known_industries: vec![
                 "Communication Services".to_string(),
                 "Information Technology".to_string(),
                 "Health Care".to_string(),
+            ],
+            known_sub_industries: vec![
+                "Application Software".to_string(),
+                "Consumer Electronics".to_string(),
+                "Semiconductors".to_string(),
             ],
             known_profiles: vec![
                 "Growth".to_string(),
@@ -216,7 +240,8 @@ mod tests {
     #[test]
     fn to_query_params_returns_all_non_empty() {
         let filter = FilterState {
-            sector: "Information Technology".to_string(),
+            industry: "Information Technology".to_string(),
+            sub_industry: "Consumer Electronics".to_string(),
             profile: "Growth".to_string(),
             instrument_name: "Apple".to_string(),
             symbol_code: "AAPL".to_string(),
@@ -229,6 +254,10 @@ mod tests {
                 ("symbol_code".to_string(), "AAPL".to_string()),
                 ("instrument_name".to_string(), "Apple".to_string()),
                 ("sector".to_string(), "Information Technology".to_string()),
+                (
+                    "sub_industry".to_string(),
+                    "Consumer Electronics".to_string()
+                ),
                 ("profile".to_string(), "Growth".to_string()),
             ],
         );
@@ -237,7 +266,8 @@ mod tests {
     #[test]
     fn is_empty_when_filter_values_are_blank() {
         let filter = FilterState {
-            known_sectors: vec!["Information Technology".to_string()],
+            known_industries: vec!["Information Technology".to_string()],
+            known_sub_industries: vec!["Consumer Electronics".to_string()],
             known_profiles: vec!["Growth".to_string()],
             ..Default::default()
         };
@@ -260,17 +290,26 @@ mod tests {
     }
 
     #[test]
-    fn suggestions_match_active_sector_case_insensitively() {
+    fn suggestions_match_active_industry_case_insensitively() {
         let mut filter = state_with_suggestions();
-        filter.sector = "tech".to_string();
+        filter.industry = "tech".to_string();
 
         assert_eq!(filter.get_suggestions(), vec!["Information Technology"]);
     }
 
     #[test]
-    fn suggestions_are_only_available_for_sector_and_profile() {
+    fn suggestions_match_active_sub_industry_case_insensitively() {
         let mut filter = state_with_suggestions();
-        filter.active = 2;
+        filter.sub_industry = "semi".to_string();
+        filter.active = 1;
+
+        assert_eq!(filter.get_suggestions(), vec!["Semiconductors"]);
+    }
+
+    #[test]
+    fn suggestions_are_only_available_for_known_classification_fields() {
+        let mut filter = state_with_suggestions();
+        filter.active = 3;
         filter.instrument_name = "growth".to_string();
 
         assert!(filter.get_suggestions().is_empty());
@@ -280,7 +319,7 @@ mod tests {
     fn suggestion_navigation_clamps_to_available_items() {
         let mut filter = state_with_suggestions();
         filter.profile = "i".to_string();
-        filter.active = 1;
+        filter.active = 2;
 
         filter.suggestion_down();
         filter.suggestion_down();
@@ -296,11 +335,11 @@ mod tests {
     #[test]
     fn apply_suggestion_sets_active_filter_value() {
         let mut filter = state_with_suggestions();
-        filter.sector = "comm".to_string();
+        filter.industry = "comm".to_string();
         filter.suggestion_idx = Some(0);
 
         assert!(filter.apply_suggestion());
-        assert_eq!(filter.sector, "Communication Services");
+        assert_eq!(filter.industry, "Communication Services");
         assert_eq!(filter.suggestion_idx, None);
     }
 }

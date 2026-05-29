@@ -74,12 +74,12 @@ impl App {
         self.loading = true;
         self.error = None;
         let params = self.filter.to_query_params();
-        let is_initial_load = self.filter.is_empty() && self.filter.known_sectors.is_empty();
+        let is_initial_load = self.filter.is_empty() && self.filter.known_industries.is_empty();
 
         match self.client.get_listings(params, include_quote).await {
             Ok(listings) => {
                 if is_initial_load {
-                    let mut sectors: Vec<String> = listings
+                    let mut industries: Vec<String> = listings
                         .iter()
                         .filter_map(|l| {
                             if l.sector.is_empty() {
@@ -89,9 +89,23 @@ impl App {
                             }
                         })
                         .collect();
-                    sectors.sort();
-                    sectors.dedup();
-                    self.filter.known_sectors = sectors;
+                    industries.sort();
+                    industries.dedup();
+                    self.filter.known_industries = industries;
+
+                    let mut sub_industries: Vec<String> = listings
+                        .iter()
+                        .filter_map(|l| {
+                            if l.sub_industry.is_empty() {
+                                None
+                            } else {
+                                Some(l.sub_industry.clone())
+                            }
+                        })
+                        .collect();
+                    sub_industries.sort();
+                    sub_industries.dedup();
+                    self.filter.known_sub_industries = sub_industries;
 
                     let mut profiles: Vec<String> = listings
                         .iter()

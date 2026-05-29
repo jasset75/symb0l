@@ -363,11 +363,12 @@ fn render_filter_panel(frame: &mut Frame, app: &App, area: Rect) {
         .split(inner);
 
     for (i, &field) in FilterField::ALL.iter().enumerate() {
-        let label = format!("{:8}: ", field.label());
+        let label = format!("{:12}: ", field.label());
         let value = match field {
             crate::filter::FilterField::SymbolCode => &app.filter.symbol_code,
             crate::filter::FilterField::InstrumentName => &app.filter.instrument_name,
-            crate::filter::FilterField::Sector => &app.filter.sector,
+            crate::filter::FilterField::Industry => &app.filter.industry,
+            crate::filter::FilterField::SubIndustry => &app.filter.sub_industry,
             crate::filter::FilterField::Profile => &app.filter.profile,
         };
         let cursor = if i == app.filter.active { "▌" } else { " " };
