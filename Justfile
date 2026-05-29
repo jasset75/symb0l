@@ -39,7 +39,7 @@ dev *ARGS:
     # Wait until the API responds on port 3000 (max 15 s)
     API_READY=0
     for i in $(seq 1 15); do
-        if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+        if curl -sf http://127.0.0.1:3000/health > /dev/null 2>&1; then
             API_READY=1
             break
         fi

@@ -217,7 +217,7 @@ mod tests {
     use super::*;
 
     fn make_app() -> App {
-        let client = ApiClient::new("http://localhost:3000");
+        let client = ApiClient::new("http://127.0.0.1:3000");
         App::new(client, Duration::from_secs(60))
     }
 

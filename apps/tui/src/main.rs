@@ -28,8 +28,8 @@ use crate::{
 #[derive(Parser, Debug)]
 #[command(name = "symb0l-tui", version, about)]
 struct Cli {
-    /// Base URL of the Symb0l API (e.g. http://localhost:3000).
-    #[arg(long, default_value = "http://localhost:3000")]
+    /// Base URL of the Symb0l API (e.g. http://127.0.0.1:3000).
+    #[arg(long, default_value = "http://127.0.0.1:3000")]
     api_url: String,
 
     /// Auto-refresh interval in seconds when Quotes mode is active.
