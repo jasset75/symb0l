@@ -4,12 +4,34 @@ import {
 } from "../../domain/interfaces/market-data-provider.js";
 import { FastifyBaseLogger } from "fastify";
 
+const RATE_LIMIT_ERROR = "rate_limit";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isRateLimitPayload(payload: Record<string, unknown>): boolean {
+  return payload.code === 429 || payload.code === "429";
+}
+
+function isRateLimitError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === RATE_LIMIT_ERROR || error.message.includes("429"))
+  );
+}
+
+function getMessage(payload: Record<string, unknown>): string {
+  return typeof payload.message === "string" ? payload.message : "unknown error";
+}
+
 export class TwelveDataProvider implements MarketDataProvider {
   private baseUrl = "https://api.twelvedata.com";
 
   constructor(
     private apiKey: string,
     private readonly log?: FastifyBaseLogger,
+    private readonly batchSize: number = 8,
   ) {}
 
   private resolveCurrency(
@@ -58,28 +80,31 @@ export class TwelveDataProvider implements MarketDataProvider {
       }
 
       const url = `${this.baseUrl}/quote?symbol=${symbol}&apikey=${this.apiKey}`;
-      // @ts-ignore
       const response = await fetch(url);
 
       if (!response.ok) {
+        if (response.status === 429) throw new Error(RATE_LIMIT_ERROR);
         throw new Error(`Twelve Data API error: ${response.statusText}`);
       }
 
-      const dataJson = await response.json();
+      const dataJson: unknown = await response.json();
+      if (!isRecord(dataJson)) {
+        throw new Error("Twelve Data API error: unexpected response format");
+      }
 
       if (dataJson.code && dataJson.code !== 200) {
-        throw new Error(`Twelve Data API error: ${dataJson.message}`);
+        if (isRateLimitPayload(dataJson)) throw new Error(RATE_LIMIT_ERROR);
+        throw new Error(`Twelve Data API error: ${getMessage(dataJson)}`);
       }
 
       if (!dataJson.symbol) return null;
-      const payload = dataJson as Record<string, unknown>;
-      const resolvedSymbol = String(payload.symbol);
+      const resolvedSymbol = String(dataJson.symbol);
 
       return {
         symbol: resolvedSymbol,
-        price: parseFloat(String(payload.close)),
-        currency: this.resolveCurrency(resolvedSymbol, payload),
-        timestamp: this.resolveTimestamp(payload),
+        price: parseFloat(String(dataJson.close)),
+        currency: this.resolveCurrency(resolvedSymbol, dataJson),
+        timestamp: this.resolveTimestamp(dataJson),
       };
     } catch (error) {
       if (this.log) {
@@ -93,56 +118,100 @@ export class TwelveDataProvider implements MarketDataProvider {
 
   async getQuotes(symbols: string[]): Promise<Quote[]> {
     if (symbols.length === 0) return [];
-    if (symbols.length === 1) {
-      const quote = await this.getQuote(symbols[0]);
-      return quote ? [quote] : [];
-    }
 
-    try {
-      if (!this.apiKey) {
-        throw new Error("API Key is missing");
-      }
+    // Twelve Data free tier allows max 8 symbols per batch request, configurable via DI
+    const chunkSize = this.batchSize;
+    const allQuotes: Quote[] = [];
 
-      const symbolsStr = symbols.join(",");
-      const url = `${this.baseUrl}/quote?symbol=${symbolsStr}&apikey=${this.apiKey}`;
-      // @ts-ignore
-      const response = await fetch(url);
+    // Helper for sleep
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
-      if (!response.ok) {
-        throw new Error(`Twelve Data API error: ${response.statusText}`);
-      }
+    for (let i = 0; i < symbols.length; i += chunkSize) {
+      const chunk = symbols.slice(i, i + chunkSize);
 
-      const data = await response.json();
-
-      // Batch response is an object where keys are symbols, OR it might be an error at top level
-      if (data.code && data.code !== 200) {
-        throw new Error(`Twelve Data API error: ${data.message}`);
-      }
-
-      const quotes: Quote[] = [];
-
-      for (const key of Object.keys(data)) {
-        const item = data[key] as Record<string, unknown>;
-        // Check if individual item has error or valid data
-        if (item.symbol && item.close) {
-          const symbol = String(item.symbol);
-          quotes.push({
-            symbol,
-            price: parseFloat(String(item.close)),
-            currency: this.resolveCurrency(symbol, item),
-            timestamp: this.resolveTimestamp(item),
-          });
+      try {
+        if (!this.apiKey) {
+          throw new Error("API Key is missing");
         }
+
+        if (chunk.length === 1) {
+          const quote = await this.getQuote(chunk[0]);
+          if (quote) {
+            allQuotes.push(quote);
+          }
+        } else {
+          const symbolsStr = chunk.join(",");
+          const url = `${this.baseUrl}/quote?symbol=${symbolsStr}&apikey=${this.apiKey}`;
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            if (response.status === 429) throw new Error(RATE_LIMIT_ERROR);
+            throw new Error(`Twelve Data API error: ${response.statusText}`);
+          }
+
+          const data: unknown = await response.json();
+          if (!isRecord(data)) {
+            throw new Error("Twelve Data API error: unexpected response format");
+          }
+
+          if (data.code && data.code !== 200) {
+            if (isRateLimitPayload(data)) throw new Error(RATE_LIMIT_ERROR);
+            throw new Error(
+              `Twelve Data API error: ${getMessage(data)} (${symbolsStr})`,
+            );
+          }
+
+          for (const key of Object.keys(data)) {
+            const item = data[key];
+            if (!isRecord(item)) {
+              continue;
+            }
+            if (item.symbol && item.close) {
+              const symbol = String(item.symbol);
+              allQuotes.push({
+                symbol,
+                price: parseFloat(String(item.close)),
+                currency: this.resolveCurrency(symbol, item),
+                timestamp: this.resolveTimestamp(item),
+              });
+            }
+          }
+        }
+      } catch (error: unknown) {
+        if (isRateLimitError(error)) {
+          if (this.log) {
+            this.log.warn(
+              `Rate limit reached on chunk ${chunk.join(",")}. Returning partial results.`,
+            );
+          } else {
+            console.warn(
+              `Rate limit reached on chunk ${chunk.join(",")}. Returning partial results.`,
+            );
+          }
+          break; // Stop fetching more chunks, but don't fail the whole transaction
+        }
+
+        if (this.log) {
+          this.log.error(
+            { err: error },
+            `Error fetching quotes from TwelveData for chunk ${chunk.join(",")}`,
+          );
+        } else {
+          console.error(
+            `Error fetching quotes from TwelveData for chunk ${chunk.join(",")}:`,
+            error,
+          );
+        }
+        throw error;
       }
 
-      return quotes;
-    } catch (error) {
-      if (this.log) {
-        this.log.error({ err: error }, "Error fetching quotes from TwelveData");
-      } else {
-        console.error("Error fetching quotes from TwelveData:", error);
+      // Small delay between chunks to avoid bursting the 8 req/min limit too fast
+      if (i + chunkSize < symbols.length) {
+        await delay(500);
       }
-      throw error;
     }
+
+    return allQuotes;
   }
 }

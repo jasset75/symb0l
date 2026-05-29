@@ -25,6 +25,7 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+.api.log
 
 # Tooling
 lefthook-local.yml
@@ -41,3 +42,6 @@ src/tools/generate_static_seeds.ts
 
 # Worktrees
 .worktrees
+
+# Rust build artifacts
+apps/tui/target

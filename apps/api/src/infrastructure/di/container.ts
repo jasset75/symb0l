@@ -24,7 +24,10 @@ export class Container {
 
     // 2. Providers
     const apiKey = process.env.TWELVE_DATA_API_KEY || "";
-    const twelveDataProvider = new TwelveDataProvider(apiKey, logger);
+    const batchSizeStr = process.env.TWELVE_DATA_BATCH_SIZE;
+    const parsedBatchSize = batchSizeStr ? parseInt(batchSizeStr, 10) : 8;
+    const batchSize = Number.isNaN(parsedBatchSize) || parsedBatchSize <= 0 ? 8 : parsedBatchSize;
+    const twelveDataProvider = new TwelveDataProvider(apiKey, logger, batchSize);
 
     // 3. Domain Services
     this.quoteService = new QuoteService(

@@ -33,16 +33,25 @@ api:
 dev *ARGS:
     #!/usr/bin/env bash
     set -e
-    echo "▶ Starting API…"
-    pnpm --filter symb0l-api dev &
+    echo "▶ Starting API (logs in .api.log)…"
+    pnpm --filter symb0l-api dev > .api.log 2>&1 &
     API_PID=$!
     # Wait until the API responds on port 3000 (max 15 s)
+    API_READY=0
     for i in $(seq 1 15); do
-        curl -sf http://localhost:3000/health > /dev/null 2>&1 && break
+        if curl -sf http://127.0.0.1:3000/health > /dev/null 2>&1; then
+            API_READY=1
+            break
+        fi
         sleep 1
     done
+    if [ "$API_READY" != "1" ]; then
+        echo "✖ API did not become ready; see .api.log"
+        kill "$API_PID" 2>/dev/null || true
+        exit 1
+    fi
     echo "▶ API ready — launching symb0l-tui"
-    cargo run --manifest-path apps/tui/Cargo.toml -- {{ARGS}} || true
+    cargo run -q --manifest-path apps/tui/Cargo.toml -- {{ARGS}} || true
     echo "▶ TUI exited — stopping API (pid $API_PID)"
     kill "$API_PID" 2>/dev/null || true
 

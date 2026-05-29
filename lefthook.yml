@@ -5,21 +5,21 @@ pre-commit:
   parallel: true
   commands:
     compile-diagrams:
-      run: pnpm --filter @symb0l/core compile-diagrams
+      run: mise exec -- pnpm --filter @symb0l/core compile-diagrams
       stage_fixed: true
 
     lint-staged:
       glob: "*.{js,ts,mjs}"
       run: |
-        pnpm -r lint
+        mise exec -- pnpm -r lint
 
     format-staged:
       glob: "*.{json,md,yml,yaml}"
-      run: pnpm -r format
+      run: mise exec -- pnpm -r format
 
     type-check:
       glob: "**/*.{ts,tsx}"
-      run: pnpm -r build
+      run: mise exec -- pnpm -r build
 
     # tests:
     #   glob: "**/*.{ts,tsx}"
@@ -28,4 +28,4 @@ pre-commit:
 pre-push:
   commands:
     integration-tests:
-      run: just test-integration
+      run: mise exec -- just test-integration
